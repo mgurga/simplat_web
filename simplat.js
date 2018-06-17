@@ -5,13 +5,15 @@ var basePath = "";
 var baseModule = 'simplat'
 var moduleName = "";
 
-var drawSpeed = 100;
+var drawSpeed = 10;
 var loadedFiles = 0;
 var totalFiles = 2;
 var imagesLoaded = 0;
 var pixSize = 10;
 var tileWidth = 0;
 var tileHeight = 0;
+var scroll = 0;
+var speed = 10;
 
 var firstRun = false;
 var prefLoaded = false;
@@ -27,8 +29,8 @@ var textures = {};
 var allLevelDataJSON = {};
 
 
-c.width = window.innerWidth;
-c.height = window.innerHeight;
+c.width = window.innerWidth-7;
+c.height = window.innerHeight-5;
 
 console.log('hello world, variables set');
 
@@ -84,7 +86,7 @@ function preload() {
 
 document.addEventListener('keydown', function(event) {
   keys[event.keyCode] = true;
-  console.log(event.key);
+  console.log(event.key + "   code: " + event.keyCode);
 });
 document.addEventListener('keyup', function(event) {
   keys[event.keyCode] = false;
@@ -110,24 +112,61 @@ function setup() {
   console.log(textures);
 
   curLevel = levels['level1'].split('%');
+  //pixSize = c.height/curLevel.length/textures.textureHeight;
+  pixSize=30;
+  speed=10;
+  console.log(pixSize);
+
 
 
 }
 
 function draw() {
 
+     if(keys[39]) {
+          //right arrow
+          scroll+=speed;
+     }
 
-  for (var i = 0; i < curLevel.length; i++) {
-    var renderStrip = curLevel[i].split('.');
+     if(keys[37]) {
+          //left arrow
+          scroll-=speed;
+     }
 
-    for (var j = 0; j < renderStrip.length; j++) {
-      //console.log(renderStrip[j]);
-      drawTexture(j * pixSize * textures.textureWidth,
-        i * pixSize * textures.textureHeight,
-        renderStrip[j]);
+     drawLevel();
+}
 
-    }
-  }
+function drawLevel() {
+     drawBackground();
+
+     for (var i = 0; i < curLevel.length; i++) {
+       var renderStrip = curLevel[i].split('.');
+
+       for (var j = 0; j < renderStrip.length; j++) {
+         //console.log(renderStrip[j]);
+         drawTexture(j * pixSize * textures.textureWidth+scroll*-1,
+           i * pixSize * textures.textureHeight,
+           renderStrip[j]);
+
+       }
+     }
+}
+
+function drawBackground() {
+     var alternate = false;
+     for(var i = 0; i < c.width/pixSize; i++) {
+          for(var j = 0; j < c.height/pixSize; j++) {
+
+               if(j % 2 == 0) {
+                    ctx.fillStyle = "#d6d6d6";
+               } else {
+                    ctx.fillStyle = "#515151";
+               }
+
+               ctx.fillRect(i*pixSize,j*pixSize,pixSize,pixSize);
+          }
+
+     }
 
 }
 
@@ -157,6 +196,7 @@ function drawStart() {
 
     draw();
     drawStart();
+
   }
 }
 
@@ -167,10 +207,6 @@ function drawTexture(x, y, textureID) {
 
   for (var i = 0; i < textures.textureWidth; i++) {
     for (var j = 0; j < textures.textureHeight; j++) {
-
-      if (textureID == 1) {
-        console.log(textures.colorIndex[texData[i + j * textures.textureWidth]]);
-      }
 
       if (textures.colorIndex[texData[i + j * textures.textureWidth]] == "alpha") {
         ctx.fillStyle = textures.background;
