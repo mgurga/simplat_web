@@ -123,12 +123,12 @@ function setup() {
 
 function draw() {
 
-     if(keys[39]) {
+     if(keys[68]) {
           //right arrow
           scroll+=speed;
      }
 
-     if(keys[37]) {
+     if(keys[65]) {
           //left arrow
           scroll-=speed;
      }
