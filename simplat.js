@@ -112,8 +112,8 @@ function setup() {
   console.log(textures);
 
   curLevel = levels['level1'].split('%');
-  //pixSize = c.height/curLevel.length/textures.textureHeight;
-  pixSize=30;
+  //pixSize = c.height/curLevel.length/textures.textureSize;
+  pixSize=10;
   speed=10;
   console.log(pixSize);
 
@@ -144,8 +144,8 @@ function drawLevel() {
 
        for (var j = 0; j < renderStrip.length; j++) {
          //console.log(renderStrip[j]);
-         drawTexture(j * pixSize * textures.textureWidth+scroll*-1,
-           i * pixSize * textures.textureHeight,
+         drawTexture(j * pixSize * textures.textureSize+scroll*-1,
+           i * pixSize * textures.textureSize,
            renderStrip[j]);
 
        }
@@ -205,18 +205,16 @@ function drawTexture(x, y, textureID) {
   var texData = texDataRaw.split('.');
   //console.log(texData);
 
-  for (var i = 0; i < textures.textureWidth; i++) {
-    for (var j = 0; j < textures.textureHeight; j++) {
+  for (var i = 0; i < textures.textureSize; i++) {
+    for (var j = 0; j < textures.textureSize; j++) {
 
-      if (textures.colorIndex[texData[i + j * textures.textureWidth]] == "alpha") {
+      if (textures.colorIndex[texData[i + j * textures.textureSize]] == "alpha") {
         ctx.fillStyle = textures.background;
-        ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
       } else {
-        ctx.fillStyle = textures.colorIndex[texData[i + j * textures.textureWidth]];
-        ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
+        ctx.fillStyle = textures.colorIndex[texData[i + j * textures.textureSize]];
       }
 
-
+      ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
     }
   }
 }
