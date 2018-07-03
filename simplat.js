@@ -97,16 +97,6 @@ console.log('added key listener');
 // start setup
 
 function setup() {
-  // for (var i = 1; i < allLevelDataJSON['textureFilenameMax'] + 1; i++) {
-  //
-  //
-  //           ctx.drawImage(tiles[i - 1], i * 10,0);
-  //           console.log('drew ' + i);
-  //
-  //
-  //      console.log(window.location.protocol + window.location.hostname + ':8000' + '/data/' + moduleName + '/textures/' + i + '.png');
-  //
-  // }
 
   console.log(levels);
   console.log(textures);
@@ -201,20 +191,36 @@ function drawStart() {
 }
 
 function drawTexture(x, y, textureID) {
-  var texDataRaw = textures[textureID];
+  var texDataRaw = textures.textureData[textureID];
   var texData = texDataRaw.split('.');
   //console.log(texData);
 
-  for (var i = 0; i < textures.textureSize; i++) {
-    for (var j = 0; j < textures.textureSize; j++) {
+  for(var i = 0; i < textures.textureSize; i++) {
+       for(var j = 0; j < textures.textureSize; j++) {
 
-      if (textures.colorIndex[texData[i + j * textures.textureSize]] == "alpha") {
-        ctx.fillStyle = textures.background;
-      } else {
-        ctx.fillStyle = textures.colorIndex[texData[i + j * textures.textureSize]];
-      }
+       if (textures.colorIndex[texData[j+textures.textureSize*i]] == "alpha") {
+            ctx.fillStyle = textures.background;
+       } else {
+            ctx.fillStyle = textures.colorIndex[texData[j+textures.textureSize*i]];
+       }
 
-      ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
-    }
+       ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
+       ctx.strokeRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
+
+     }
   }
+
+  // for (var i = 0; i < textures.textureSize; i++) {
+  //   for (var j = 0; j < textures.textureSize; j++) {
+  //
+  //     if (textures.colorIndex[texData[i + j * textures.textureSize]] == "alpha") {
+  //       ctx.fillStyle = textures.background;
+  //     } else {
+  //       ctx.fillStyle = textures.colorIndex[texData[i + j * textures.textureSize]];
+  //     }
+  //
+  //     ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
+  //     ctx.strokeRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
+  //   }
+  // }
 }
