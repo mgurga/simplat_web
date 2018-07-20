@@ -19,6 +19,7 @@ var pspeed = 10;
 var firstRun = false;
 var prefLoaded = false;
 var levelsLoaded = false;
+var failedGets = 0;
 
 var keys = [];
 var tiles = [];
@@ -28,6 +29,9 @@ var prefs = {};
 var levels = {};
 var textures = {};
 var allLevelDataJSON = {};
+
+//game
+var frame = 0;
 
 //level collision
 var lCx = [],
@@ -55,7 +59,14 @@ var pxV = 0.0,
     canMoveLeft = true;
 
 var pointx = 100,
-    pointy = 100;
+    pointy = 100,
+    blockHitX = [],
+    blockHitY = [],
+    blockHitW = [],
+    blockHitH = [],
+    blockHitId = [],
+    blockHitFrame = [],
+    blockHitTotal = [];
 
 c.width = window.innerWidth - 7;
 c.height = window.innerHeight - 5;
@@ -85,7 +96,7 @@ function preload() {
                         //console.log(loadedFiles);
                     }
                 },
-                function (xhr) { }
+                function (xhr) { failedGets++; }
             );
 
             console.log('getting textures');
@@ -99,8 +110,20 @@ function preload() {
                         //console.log(loadedFiles);
                     }
                 },
-                function (xhr) { }
+                function (xhr) { failedGets++; }
             );
+
+            if (failedGets > 10) {
+                firstRun = true;
+
+                if (!levelsLoaded && !prefLoaded) {
+                    alert('Failed loading level and texture data');
+                } else if (!levelsLoaded) {
+                    alert('Failed loading level data');
+                } else if (!prefLoaded) {
+                    alert('Failed loading pref data');
+                }
+            }
 
             if (levelsLoaded && prefLoaded) {
                 firstRun = true;
@@ -143,13 +166,12 @@ function loadLevel(levelName) {
     curLevel = levels[levelName].split('%');
     createCollision();
 
-    playerX = 960.0;
+    playerX = 200.0;
     playerY = 0;
 }
 
 function createCollision() {
     var colCount = 0;
-
     var levelStrip = [];
 
     for (var i = 0; i < curLevel.length; i++) {
@@ -180,8 +202,11 @@ function draw() {
     drawLevel();
     drawPlayer(playerX, playerY - 80, 0);
 
+    
+
     drawCollision();
     drawReticle(playerX, playerY);
+    drawReticle(playerX, playerY - playerHeight);
     drawReticle(playerX - playerWidth / 2, playerY);
     drawReticle(playerX + playerWidth / 2, playerY);
 
@@ -196,10 +221,11 @@ function draw() {
     ctx.fillText('X:' + pointx + ' Y:' + pointy, pointx, pointy);
     ctx.strokeRect(pointx, pointy, textures.textureSize * pixSize, 1);
 
-    if(playerY > 5000) {
+    if (playerY > 5000) {
         pyV = 0;
-        playerY = 0;        
+        playerY = 0;
     }
+    frame++;
 }
 
 function drawReticle(_rx, _ry) {
@@ -265,24 +291,26 @@ function calculateCollision() {
     for (var i = 0; i < lCy.length; i++) {
         if (pxV > 0) {
             canMoveLeft = true;
-            if (lCx[i] + lCwidth[i] > playerX+distanceToWall && lCx[i] < playerX + playerWidth / 2 + distanceToWall &&
-                playerY-1 > lCy[i] && playerY + playerHeight > lCy[i] + lCheight[i]) {
+            if (lCx[i] + lCwidth[i] > playerX + distanceToWall && lCx[i] < playerX + playerWidth / 2 + distanceToWall &&
+                playerY - 1 > lCy[i] && playerY + playerHeight > lCy[i] + lCheight[i] &&
+                playerY - playerHeight < lCy[i] + lCheight[i]) {
 
                 //playerX = playerX + -1*pxV;
                 pxV = 0;
                 jumping = true;
                 canMoveRight = false;
             }
-        } else if(pxV < 0) {
+        } else if (pxV < 0) {
             canMoveRight = true;
             if (lCx[i] < playerX && lCx[i] + lCwidth[i] > playerX - playerWidth / 2 - distanceToWall &&
-                playerY-1 > lCy[i] && playerY + playerHeight > lCy[i] + lCheight[i]) {
+                playerY - 1 > lCy[i] && playerY + playerHeight > lCy[i] + lCheight[i] &&
+                playerY - playerHeight < lCy[i] + lCheight[i]) {
 
                 //playerX = playerX + -1*pxV;
                 pxV = 0;
                 jumping = true;
                 canMoveLeft = false;
-                
+
             }
 
         } else {
@@ -291,11 +319,62 @@ function calculateCollision() {
         }
     }
 
-    playerX = playerX + pxV;
-    pxV = pxV * pfriction;
+    for (var i = 0; i < lCy.length; i++) {
+        if(pyV < -2) {
+            if(lCy[i] + lCheight[i] < playerY+1 && lCy[i] + lCheight[i] > playerY - playerHeight && 
+                lCx[i] < playerX + playerWidth / 2 &&
+                lCx[i] + lCwidth[i] > playerX - playerWidth / 2) {
+
+                blockHitUnder(lCx[i], lCy[i], i, 'this is unused right now', 'collision', true);
+
+                playerY = playerY - pyV;
+                pyV = 0;
+            }
+        }
+    }
+
+    function blockHitUnder(_x, _y, _op1, _op2, _namespace, _destroy) {
+
+        var _blockx = -1;
+        var _blocky = -1;
+        var _blockWidth = -1;
+        var _blockHeight = -1; 
+
+        //fill out the above variables with the parameters given by the function
+        if(_namespace == 'collision') {
+            _blockWidth = lCwidth[_op1];
+            _blockHeight = lCheight[_op1];
+            _blockx = (lCx[_op1] / _blockHeight);
+            _blocky = (lCy[_op1] / _blockWidth);
+            
+        }
+
+        if(_destroy == true) {
+            console.log(curLevel);
+            console.log('broke blockx: ' + _blockx + ' and blocky: ' + _blocky);
+            var _lengthBackup = curLevel[_blocky];
+            var _curStripEdit = curLevel[_blocky].split('.');
+            createHitAnimation();
+            _curStripEdit[_blockx] = '0';
+            var _recompiled = '';
+            for(var i = 0; i < _lengthBackup.length; i++) {
+                _recompiled+=_curStripEdit[i] + '.';
+            }
+            _recompiled = _recompiled.substring(0, _lengthBackup.length);
+            curLevel[_blocky] = _recompiled;
+
+        } else {
+
+        }
+
+    }
+
+    function createHitAnimation() {
+        
+    }
 
     //ground collision detection
-    function onFloorCollision() {
+    function checkFloorCollision() {
         for (var i = 0; i < lCy.length; i++) {
 
             if (lCy[i] < playerY && lCy[i] + lCheight[i] > playerY &&
@@ -308,7 +387,10 @@ function calculateCollision() {
         return false;
     }
 
-    if (onFloorCollision()) {
+    playerX = playerX + pxV;
+    pxV = pxV * pfriction;
+
+    if (checkFloorCollision()) {
         playerY = playerY - pyV;
         pyV = 0;
         jumping = false;
