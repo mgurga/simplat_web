@@ -46,7 +46,8 @@ var playerX = 30.0,
     playerY = 10000.0,
     playerWidth = 50,
     playerHeight = 80,
-    playerJumpHeight = 20;
+    playerJumpHeight = 20,
+    playerCrouching = false;
 
 //player physics
 var pxV = 0.0,
@@ -66,7 +67,7 @@ var pointx = 100,
     blockHitH = [],
     blockHitId = [],
     blockHitFrame = [],
-    blockHitTotal = [];
+    blockHitTotal = 0;
 
 c.width = window.innerWidth - 7;
 c.height = window.innerHeight - 5;
@@ -202,7 +203,7 @@ function draw() {
     drawLevel();
     drawPlayer(playerX, playerY - 80, 0);
 
-    
+
 
     drawCollision();
     drawReticle(playerX, playerY);
@@ -210,7 +211,7 @@ function draw() {
     drawReticle(playerX - playerWidth / 2, playerY);
     drawReticle(playerX + playerWidth / 2, playerY);
 
-    ctx.strokeRect(playerX - 25, playerY - 80, playerWidth, playerHeight);
+    ctx.strokeRect(playerX - playerWidth / 2, playerY - playerHeight, playerWidth, playerHeight);
     ctx.fillText('X: ' + Math.round(playerX) + ' Y: ' + playerY, playerX - 25, playerY - 90);
 
     ctx.fillText('player x: ' + playerX, 0, 10);
@@ -226,6 +227,41 @@ function draw() {
         playerY = 0;
     }
     frame++;
+    animationTick();
+}
+
+function animationTick() {
+    for (var i = 0; i < blockHitTotal; i++) {
+
+        var curAnimFrame = frame - blockHitFrame[i];
+        var curHeight = 0;
+
+        if (curAnimFrame < 3) {
+            curHeight = curAnimFrame;
+
+            drawTexture(blockHitX[i], blockHitY[i] - curHeight * 2, blockHitId[i]);
+        } else if (curAnimFrame > 2 && curAnimFrame < 6) {
+            curHeight = 7 - curAnimFrame;
+
+            drawTexture(blockHitX[i], blockHitY[i] - curHeight * 2, blockHitId[i]);
+        } else {
+
+            deleteAnimation(i);
+        }
+
+    }
+}
+
+function deleteAnimation(id) {
+    console.log('deleted id: ' + id + ' out of a total of: ' + blockHitTotal);
+    for (var i = 0; i < blockHitTotal - id; i++) {
+        blockHitFrame[id + i] = blockHitFrame[id + 1 + i];
+        blockHitId[id + i] = blockHitId[id + 1 + i];
+        blockHitX[id + i] = blockHitX[id + 1 + i];
+        blockHitY[id + i] = blockHitY[id + 1 + i];
+
+    }
+    blockHitTotal--;
 }
 
 function drawReticle(_rx, _ry) {
@@ -252,11 +288,23 @@ function drawCollision() {
 
 function handleKeys() {
 
+    if(playerCrouching) {
+        pspeed = 3;
+        gravity = 2;
+    } else {
+        pspeed = 10;
+    }
+
     var pointpspeed = 1;
 
     if (keys[40]) {
         //down arrow
         pointy -= pointpspeed;
+        playerHeight = 40;
+        playerCrouching = true;
+    } else {
+        playerHeight = 80;
+        playerCrouching = false;
     }
 
     if (keys[39] && canMoveRight) {
@@ -320,12 +368,13 @@ function calculateCollision() {
     }
 
     for (var i = 0; i < lCy.length; i++) {
-        if(pyV < -2) {
-            if(lCy[i] + lCheight[i] < playerY+1 && lCy[i] + lCheight[i] > playerY - playerHeight && 
+        if (pyV < -2) {
+            if (lCy[i] + lCheight[i] < playerY + 1 && lCy[i] + lCheight[i] > playerY - playerHeight &&
                 lCx[i] < playerX + playerWidth / 2 &&
                 lCx[i] + lCwidth[i] > playerX - playerWidth / 2) {
 
                 blockHitUnder(lCx[i], lCy[i], i, 'this is unused right now', 'collision', true);
+                deleteCollision(i);
 
                 playerY = playerY - pyV;
                 pyV = 0;
@@ -333,32 +382,46 @@ function calculateCollision() {
         }
     }
 
+    function deleteCollision(id) {
+        console.log('[COLLISION] deleted id: ' + id + ' out of a total of: ' + lCtotal);
+        console.log(lCx);
+        for (var i = 0; i < lCtotal - id; i++) {
+            lCx[id + i] = lCx[id + 1 + i];
+            lCy[id + i] = lCy[id + 1 + i];
+            lCwidth[id + i] = lCwidth[id + 1 + i];
+            lCheight[id + i] = lCheight[id + 1 + i];
+
+        }
+        lCtotal--;
+    }
+
     function blockHitUnder(_x, _y, _op1, _op2, _namespace, _destroy) {
 
         var _blockx = -1;
         var _blocky = -1;
         var _blockWidth = -1;
-        var _blockHeight = -1; 
+        var _blockHeight = -1;
 
         //fill out the above variables with the parameters given by the function
-        if(_namespace == 'collision') {
+        if (_namespace == 'collision') {
             _blockWidth = lCwidth[_op1];
             _blockHeight = lCheight[_op1];
             _blockx = (lCx[_op1] / _blockHeight);
             _blocky = (lCy[_op1] / _blockWidth);
-            
+
         }
 
-        if(_destroy == true) {
+        if (_destroy == true) {
             console.log(curLevel);
             console.log('broke blockx: ' + _blockx + ' and blocky: ' + _blocky);
             var _lengthBackup = curLevel[_blocky];
             var _curStripEdit = curLevel[_blocky].split('.');
-            createHitAnimation();
+
+            createHitAnimation(lCx[_op1], lCy[_op1], _curStripEdit[_blockx], frame);
             _curStripEdit[_blockx] = '0';
             var _recompiled = '';
-            for(var i = 0; i < _lengthBackup.length; i++) {
-                _recompiled+=_curStripEdit[i] + '.';
+            for (var i = 0; i < _lengthBackup.length; i++) {
+                _recompiled += _curStripEdit[i] + '.';
             }
             _recompiled = _recompiled.substring(0, _lengthBackup.length);
             curLevel[_blocky] = _recompiled;
@@ -369,8 +432,13 @@ function calculateCollision() {
 
     }
 
-    function createHitAnimation() {
-        
+    function createHitAnimation(_x, _y, _id, _startFrame) {
+        blockHitX[blockHitTotal] = _x;
+        blockHitY[blockHitTotal] = _y;
+        blockHitId[blockHitTotal] = _id;
+        blockHitFrame[blockHitTotal] = _startFrame;
+        blockHitTotal++;
+
     }
 
     //ground collision detection
@@ -380,7 +448,13 @@ function calculateCollision() {
             if (lCy[i] < playerY && lCy[i] + lCheight[i] > playerY &&
                 lCx[i] < playerX + playerWidth / 2 &&
                 lCx[i] + lCwidth[i] > playerX - playerWidth / 2) {
+                
+                if(pyV > 20 && playerCrouching) {
+                    blockHitUnder(lCx[i], lCy[i], i, 'this is unused right now', 'collision', true);
+                }
+
                 return true;
+
             }
         }
 
