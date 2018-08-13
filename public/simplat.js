@@ -6,12 +6,12 @@ var baseModule = "simplat";
 var moduleName = "";
 var blankTexture = "";
 var staryNightHex = "#00033a";
+var canvasFont = "30px monospace";
 
 var drawpspeed = 10;
 var loadedFiles = 0;
 var totalFiles = 2;
 var imagesLoaded = 0;
-var pixSize = 10;
 var tileWidth = 0;
 var tileHeight = 0;
 var scroll = 0;
@@ -26,6 +26,8 @@ var firstRun = false;
 var prefLoaded = false;
 var levelsLoaded = false;
 var levelMetaExists = false;
+var canGroundPound = false;
+var debug = false;
 
 var keys = [];
 var tiles = [];
@@ -42,29 +44,40 @@ var allLevelDataJSON = {};
 
 //game
 var frame = 0;
+var fps = 45;
+var pixSize = 7;
+
+//level attributes
+var textureAtts = {};
 
 //level collision
 var lCx = [],
   lCy = [],
   lCwidth = [],
   lCheight = [],
+  lCid = [],
   levelLength = 1000,
   lCtotal = 0;
+
 
 //player declarations
 var playerX = 30.0,
   playerY = 10000.0,
   playerWidth = 50,
   playerHeight = 80,
-  playerJumpHeight = 20,
-  playerCrouching = false;
+  playerJumpHeight = 25,
+  playerCrouching = false,
+  playerRightPressed = false;
 
 //player physics
 var pxV = 0.0,
+  pfaster = false,
+  fastFrameStart = 0;
   pyV = 0.0,
   pfriction = 0.6,
   pgravity = 1,
   pspeed = 2,
+  defaultpspeed = 10,
   pjumping = false,
   canMoveRight = true,
   canMoveLeft = true;
@@ -95,7 +108,7 @@ function preload() {
 
       loadJSON(
         "data/" + baseModule + "/levels.json",
-        function(data) {
+        function (data) {
           if (!prefLoaded) {
             levels = data;
             prefLoaded = true;
@@ -103,7 +116,7 @@ function preload() {
             //console.log(loadedFiles);
           }
         },
-        function(xhr) {
+        function (xhr) {
           failedGets++;
         }
       );
@@ -113,14 +126,14 @@ function preload() {
 
       loadJSON(
         "data/" + baseModule + "/textures.json",
-        function(data) {
+        function (data) {
           if (!levelsLoaded) {
             textures = data;
             levelsLoaded = true;
             //console.log(loadedFiles);
           }
         },
-        function(xhr) {
+        function (xhr) {
           failedGets++;
         }
       );
@@ -148,11 +161,11 @@ function preload() {
   }
 }
 
-document.addEventListener("keydown", function(event) {
+document.addEventListener("keydown", function (event) {
   keys[event.keyCode] = true;
-  console.log(event.key + "   code: " + event.keyCode);
+  //console.log(event.key + "   code: " + event.keyCode);
 });
-document.addEventListener("keyup", function(event) {
+document.addEventListener("keyup", function (event) {
   keys[event.keyCode] = false;
 });
 
@@ -164,13 +177,14 @@ function setup() {
   console.log(levels);
   console.log(textures);
 
-  loadLevel("level1");
 
-  //pixSize = c.height/curLevel.length/textures.textureSize;
   pixSize = 10;
-  pspeed = 10;
+  pspeed = 30;
   console.log(pixSize);
   texturePixSize = pixSize * textures.textureSize;
+  textureAtts = textures.attributes;
+
+  loadLevel("level1");
 
   for (var i = 0; i < textures.textureSize * textures.textureSize; i++) {
     blankTexture += "0.";
@@ -178,6 +192,7 @@ function setup() {
   blankTexture = blankTexture.substring(0, blankTexture.length - 1);
 
   levelBlockLength = curLevel[0].split(".") * texturePixSize;
+
 }
 
 function loadLevel(levelName) {
@@ -203,13 +218,18 @@ function createCollision() {
 
   for (var i = 0; i < curLevel.length; i++) {
     levelStrip = curLevel[i];
+    levelStrip = levelStrip.split(".");
 
-    for (var j = 0; j < levelLength; j++) {
-      if (levelStrip[j] == "1") {
-        lCx[colCount] = (j * textures.textureSize * pixSize) / 2;
-        lCy[colCount] = i * textures.textureSize * pixSize;
-        lCwidth[colCount] = textures.textureSize * pixSize;
-        lCheight[colCount] = textures.textureSize * pixSize;
+    for (var j = 0; j < levelStrip.length; j++) {
+      //isSolid(levelStrip[j])
+      if (isSolid(levelStrip[j])) {
+        var blockDelta = (textures.textureSize * pixSize);
+
+        lCx[colCount] = j * blockDelta;
+        lCy[colCount] = i * blockDelta;
+        lCwidth[colCount] = blockDelta;
+        lCheight[colCount] = blockDelta;
+        lCid[colCount] = levelStrip[j];
 
         colCount++;
       }
@@ -218,6 +238,30 @@ function createCollision() {
 
   console.log("collision boxes: " + colCount);
   lCtotal = colCount;
+}
+
+function isSolid(texID) {
+
+  var collideList = textureAtts.canCollide;
+  var rawHurtList = textureAtts.canHurt;
+  //console.log(collideList);
+  var solidList = collideList.split(",");
+  var hurtList = rawHurtList.split(",");
+
+  for (var i = 0; i < solidList.length; i++) {
+    if (solidList[i] == texID) {
+      return true;
+    }
+  }
+
+  for (var i = 0; i < hurtList.length; i++) {
+    if (hurtList[i] == texID) {
+      return true;
+    }
+  }
+
+  return false;
+
 }
 
 function draw() {
@@ -233,40 +277,81 @@ function draw() {
   drawLevel();
   drawPlayer(playerX, playerY - 80, 0);
 
-  drawReticle(playerX, playerY);
-  drawReticle(playerX, playerY - playerHeight);
-  drawReticle(playerX - playerWidth / 2, playerY);
-  drawReticle(playerX + playerWidth / 2, playerY);
+  if (debug) {
+    drawReticle(playerX, playerY);
+    drawReticle(playerX, playerY - playerHeight);
+    drawReticle(playerX - playerWidth / 2, playerY);
+    drawReticle(playerX + playerWidth / 2, playerY);
 
-  ctx.strokeRect(
-    playerX - playerWidth / 2,
-    playerY - playerHeight,
-    playerWidth,
-    playerHeight
-  );
-  ctx.fillText(
-    "X: " + Math.round(playerX) + " Y: " + playerY,
-    playerX - 25,
-    playerY - 90
-  );
+    ctx.strokeRect(
+      playerX - playerWidth / 2,
+      playerY - playerHeight,
+      playerWidth,
+      playerHeight
+    );
+    ctx.fillText(
+      "X: " + Math.round(playerX) + " Y: " + playerY + " pFaster: " + pfaster + " pxV: " + pxV + " pyV: " + pyV,
+      playerX-30,
+      playerY - 90
+    );
 
-  ctx.fillText("player x: " + playerX, 0, 10);
-  ctx.fillText("player y: " + playerY, 0, 20);
-  ctx.fillText("player xV: " + pxV, 0, 30);
-  ctx.fillText("player yV: " + pyV, 0, 40);
+    // ctx.fillText("player x: " + playerX, 0, 10);
+    // ctx.fillText("player y: " + playerY, 0, 20);
+    // ctx.fillText("player xV: " + pxV, 0, 30);
+    // ctx.fillText("player yV: " + pyV, 0, 40);
 
-  ctx.fillText("X:" + pointx + " Y:" + pointy, pointx, pointy);
-  ctx.strokeRect(pointx, pointy, textures.textureSize * pixSize, 1);
+    // ctx.fillText("X:" + pointx + " Y:" + pointy, pointx, pointy);
+    // ctx.strokeRect(pointx, pointy, textures.textureSize * pixSize, 1);
+  }
 
-  if (playerY > 5000) {
+  var scrollLine = (c.width / 10) * 6;
+
+  if(pxV >= 6 && !pfaster) {
+    pfaster = true;
+    fastFrameStart = frame;
+  }
+
+  if(pxV < 6 || !playerRightPressed) {
+    pfaster = false;
+  }
+
+  if(pfaster && fastFrameStart + 60 < frame) {
+    var speedDiff = frame / fastFrameStart;
+
+    if(speedDiff > 200) {
+      speedDiff = 200;
+    }
+
+    pxV += pspeed + speedDiff;
+    console.log("diff: " + speedDiff);
+    console.log("pspeed: " + pspeed);
+    console.log("frame: " + frame);
+    console.log("frameStart: " + fastFrameStart);
+  }
+
+  if(pfaster && fastFrameStart + 60 > frame) {
+    pxV+=pspeed;
+  }
+
+  if (playerX > scrollLine) {
+    scroll += pxV;
+    playerX = scrollLine;
+  }
+
+  if (playerY > curLevel.length * textures.textureSize * pixSize) {
     pyV = 0;
     playerY = 0;
+
+    if (playerX < 0) {
+      playerX = 300;
+    }
   }
   frame++;
   animationTick();
 }
 
 function deleteAnimation(id) {
+
   //console.log("deleted id: " + id + " out of a total of: " + blockHitTotal);
   for (var i = 0; i < blockHitTotal - id; i++) {
     blockHitFrame[id + i] = blockHitFrame[id + 1 + i];
@@ -277,39 +362,89 @@ function deleteAnimation(id) {
   blockHitTotal--;
 }
 
+function touchedCollision(colID) {
+
+  var rawHurtAtt = textureAtts.canHurt;
+  var hurtAtt = rawHurtAtt.split(',');
+
+  for (var i = 0; i < hurtAtt.length + 1; i++) {
+    //console.log(hurtAtt + " " + lCid[colID]);
+    if (hurtAtt[i] == lCid[colID]) {
+      console.log("you are dead");
+      youDied();
+    }
+
+  }
+
+  var rawGoalAtt = textureAtts.isGoal;
+  var goalAtt = rawGoalAtt.split(',');
+
+  for (var i = 0; i < goalAtt.length + 1; i++) {
+    //console.log(hurtAtt + " " + lCid[colID]);
+    if (goalAtt[i] == lCid[colID]) {
+      console.log("you win");
+      youWin();
+    }
+
+  }
+
+}
+
+function youWin() {
+  fps = 0;
+}
+
+function youDied() {
+  if (!debug) {
+    scroll = 0;
+    playerX = 100;
+  }
+}
+
 function calculateCollision() {
   playerY = playerY + pyV;
 
   //wall collision detection
   //use canMoveRight and canMoveLeft to restrict movement
   var distanceToWall = 10;
+  var despawnRadius = 200;
 
   for (var i = 0; i < lCy.length; i++) {
     if (pxV > 0) {
       canMoveLeft = true;
       if (
-        lCx[i] + lCwidth[i] > playerX + distanceToWall &&
-        lCx[i] < playerX + playerWidth / 2 + distanceToWall &&
+        playerX + scroll + despawnRadius > lCx[i] &&
+        playerX + scroll - despawnRadius < lCx[i] &&
+        lCx[i] + lCwidth[i] > playerX + distanceToWall + scroll &&
+        lCx[i] < playerX + playerWidth / 2 + distanceToWall + scroll &&
         playerY - 1 > lCy[i] &&
         playerY + playerHeight > lCy[i] + lCheight[i] &&
-        playerY - playerHeight < lCy[i] + lCheight[i]
+        playerY - playerHeight < lCy[i] + lCheight[i] && pyV < 2
       ) {
         //playerX = playerX + -1*pxV; + scroll
+        touchedCollision(i);
+        
         pxV = 0;
+        
         jumping = true;
         canMoveRight = false;
       }
     } else if (pxV < 0) {
       canMoveRight = true;
       if (
-        lCx[i] < playerX &&
-        lCx[i] + lCwidth[i] > playerX - playerWidth / 2 - distanceToWall &&
+        playerX + scroll + despawnRadius > lCx[i] &&
+        playerX + scroll - despawnRadius < lCx[i] &&
+        lCx[i] < playerX + scroll &&
+        lCx[i] + lCwidth[i] > playerX - playerWidth / 2 - distanceToWall + scroll &&
         playerY - 1 > lCy[i] &&
         playerY + playerHeight > lCy[i] + lCheight[i] &&
         playerY - playerHeight < lCy[i] + lCheight[i]
       ) {
         //playerX = playerX + -1*pxV;
+        touchedCollision(i);
+        
         pxV = 0;
+        
         jumping = true;
         canMoveLeft = false;
       }
@@ -322,37 +457,59 @@ function calculateCollision() {
   for (var i = 0; i < lCy.length; i++) {
     if (pyV < -2) {
       if (
+        playerX + scroll + despawnRadius > lCx[i] &&
+        playerX + scroll - despawnRadius < lCx[i] &&
         lCy[i] + lCheight[i] < playerY + 1 &&
         lCy[i] + lCheight[i] > playerY - playerHeight &&
-        lCx[i] < playerX + playerWidth / 2 &&
-        lCx[i] + lCwidth[i] > playerX - playerWidth / 2
+        lCx[i] < playerX + playerWidth / 2 + scroll &&
+        lCx[i] + lCwidth[i] > playerX - playerWidth / 2 + scroll
       ) {
-        blockHitUnder(
-          lCx[i],
-          lCy[i],
-          i,
-          "this is unused right now",
-          "collision",
-          true
-        );
-        deleteCollision(i);
-
-        playerY = playerY - pyV;
+        touchedCollision(i);
+        if (canBreakBlock(i)) {
+          blockHitUnder(
+            lCx[i],
+            lCy[i],
+            i,
+            "this is unused right now",
+            "collision",
+            true
+          );
+          deleteCollision(i);
+        }
+        playerY = playerY + pyV;
         pyV = 0;
       }
     }
+  }
+
+  function canBreakBlock(colID) {
+    //true means to break and false is to not
+
+    var rawBreakAtt = textureAtts.canBreak;
+    var breakAtt = rawBreakAtt.split(',');
+
+    for (var i = 0; i < breakAtt.length + 1; i++) {
+    //console.log(hurtAtt + " " + lCid[colID]);
+    if (breakAtt[i] == lCid[colID]) {
+      return true;
+    }
+
+  }
+
+    return false;
   }
 
   function deleteCollision(id) {
     console.log(
       "[COLLISION] deleted id: " + id + " out of a total of: " + lCtotal
     );
-    console.log(lCx);
+
     for (var i = 0; i < lCtotal - id; i++) {
       lCx[id + i] = lCx[id + 1 + i];
       lCy[id + i] = lCy[id + 1 + i];
       lCwidth[id + i] = lCwidth[id + 1 + i];
       lCheight[id + i] = lCheight[id + 1 + i];
+      lCid[id + i] = lCid[id + 1 + i];
     }
     lCtotal--;
   }
@@ -385,8 +542,7 @@ function calculateCollision() {
       }
       _recompiled = _recompiled.substring(0, _lengthBackup.length);
       curLevel[_blocky] = _recompiled;
-    } else {
-    }
+    } else {}
   }
 
   function createHitAnimation(_x, _y, _id, _startFrame) {
@@ -403,10 +559,10 @@ function calculateCollision() {
       if (
         lCy[i] < playerY &&
         lCy[i] + lCheight[i] > playerY &&
-        lCx[i] < playerX + playerWidth / 2 &&
-        lCx[i] + lCwidth[i] > playerX - playerWidth / 2
+        lCx[i] < playerX + playerWidth / 2 + scroll &&
+        lCx[i] + lCwidth[i] > playerX - playerWidth / 2 + scroll
       ) {
-        if (pyV > 20 && playerCrouching) {
+        if (canGroundPound && pyV > 20 && playerCrouching) {
           blockHitUnder(
             lCx[i],
             lCy[i],
@@ -460,7 +616,7 @@ function makeStars() {
 
 function loadJSON(path, success, error) {
   var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
+  xhr.onreadystatechange = function () {
     if (xhr.readyState === XMLHttpRequest.DONE) {
       if (xhr.status === 200) {
         if (success) success(JSON.parse(xhr.responseText));
@@ -474,10 +630,10 @@ function loadJSON(path, success, error) {
 }
 
 function drawStart() {
-    var drawTimeout = setTimeout(drawLoop, drawpspeed);
-  
-    function drawLoop() {
-      draw();
-      drawStart();
-    }
-  }
+  setTimeout(function () {
+    requestAnimationFrame(drawStart);
+
+    draw();
+
+  }, 1000 / fps);
+}

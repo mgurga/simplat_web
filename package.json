@@ -1,0 +1,19 @@
+{
+  "name": "simplat_web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rokie95/simplat_web.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rokie95/simplat_web/issues"
+  },
+  "homepage": "https://github.com/rokie95/simplat_web#readme"
+}

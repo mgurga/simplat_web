@@ -8,32 +8,33 @@ function drawTexture(x, y, textureID) {
   if (texDataRaw == blankTexture && textureID == 0) {
     if (levelMetaExists && curLevelMeta["staryNight"] == true) {
       ctx.fillStyle = staryNightHex;
-      ctx.fillRect(x, y, texturePixSize, texturePixSize);
+      ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
     } else {
       ctx.fillStyle = textures.background;
-      ctx.fillRect(x, y, texturePixSize, texturePixSize);
+      ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
     }
   } else {
     if (levelMetaExists && curLevelMeta["staryNight"] == true) {
       ctx.fillStyle = staryNightHex;
-      ctx.fillRect(x, y, texturePixSize, texturePixSize);
+      ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
     } else {
       ctx.fillStyle = textures.background;
-      ctx.fillRect(x, y, texturePixSize, texturePixSize);
+      ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
     }
 
     for (var i = 0; i < textures.textureSize; i++) {
       for (var j = 0; j < textures.textureSize; j++) {
         if (
           textures.colorIndex[texData[j + textures.textureSize * i]] == "alpha"
-        ) {
-        } else {
+        ) {} else {
           ctx.fillStyle =
             textures.colorIndex[texData[j + textures.textureSize * i]];
-          ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
+          ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize + 1, pixSize);
         }
 
-        ctx.strokeRect(i * pixSize + x, j * pixSize + y, pixSize, pixSize);
+        if (debug) {
+          ctx.strokeRect(i * pixSize + x, j * pixSize + y, pixSize + 1, pixSize);
+        }
       }
     }
   }
@@ -41,17 +42,17 @@ function drawTexture(x, y, textureID) {
 
 function handleKeys() {
   if (playerCrouching) {
-    pspeed = 3;
+    pspeed = defaultpspeed / 2;
     gravity = 2;
   } else {
-    pspeed = 10;
+    pspeed = defaultpspeed;
   }
 
   var pointpspeed = 1;
 
   if (keys[40]) {
     //down arrow
-    pointy -= pointpspeed;
+    //pointy -= pointpspeed;
     playerHeight = 40;
     playerCrouching = true;
   } else {
@@ -59,33 +60,47 @@ function handleKeys() {
     playerCrouching = false;
   }
 
-  if (keys[39] && canMoveRight) {
+  if (keys[39] && canMoveRight || keys[68] && canMoveRight) {
     //right arrow
-    pxV = pspeed;
-    pointx += pointpspeed;
+    pxV = defaultpspeed;
+    //pointx += pointpspeed;
+    playerRightPressed = true;
+  } else {
+    playerRightPressed = false;
   }
 
-  if (keys[38]) {
+  if (keys[38] || keys[87]) {
     //up arrow
     if (!jumping) {
       pyV = -1 * playerJumpHeight;
-      pointy += pointpspeed;
+      //pointy += pointpspeed;
       jumping = true;
     }
   }
 
-  if (keys[37] && canMoveLeft) {
+  if (keys[37] && canMoveLeft || keys[65] && canMoveLeft) {
     //left arrow
-    pxV = -1 * pspeed;
-    pointx -= pointpspeed;
+    pxV = -1 * defaultpspeed;
+    //pointx -= pointpspeed;
   }
 
-  if (keys[68]) {
-    scroll += scrollSpeed;
+  if(keys[220]) {
+    if(debug) {
+      debug = false;
+    } else {
+      debug = true;
+    }
+    keys[220] = false;
   }
 
-  if (keys[65]) {
-    scroll -= scrollSpeed;
+  if (debug) {
+    if (keys[69]) {
+      scroll += scrollSpeed;
+    }
+
+    if (keys[81]) {
+      scroll -= scrollSpeed;
+    }
   }
 }
 
@@ -129,12 +144,14 @@ function drawPlayer(_px, _py, _pid) {
 function drawLevel() {
   drawBackground();
 
+  var drawingCutoff = 35;
+
   for (var i = 0; i < curLevel.length; i++) {
     var renderStrip = curLevel[i].split(".");
 
-    for (var j = 0; j < 50 + scrollBlock; j++) {
+    for (var j = 0; j < scrollBlock + drawingCutoff; j++) {
       //console.log(renderStrip[j]);
-      if (j > scrollBlock - 50)
+      if (j > scrollBlock - 5)
         drawTexture(
           j * pixSize * textures.textureSize + scroll * -1,
           i * pixSize * textures.textureSize,
@@ -143,8 +160,13 @@ function drawLevel() {
     }
   }
 
-  drawStars();
-  drawCollision();
+  if (levelMetaExists && curLevelMeta["staryNight"] == true) {
+    drawStars();
+  }
+
+  if (debug) {
+    drawCollision();
+  }
 }
 
 function drawStars() {
@@ -156,7 +178,7 @@ function drawStars() {
 }
 
 function drawBackground() {
-  ctx.fillStyle = "#e0e2ff";
+  ctx.fillStyle = "#262626";
   ctx.fillRect(0, 0, c.width, c.height);
 
   //   for (var i = 0; i < c.width / pixSize; i++) {
@@ -173,11 +195,13 @@ function drawBackground() {
 }
 
 function drawCollision() {
+  ctx.fillStyle = '#000000';
   for (var i = 0; i < lCtotal; i++) {
-    ctx.strokeRect(lCx[i], lCy[i], lCwidth[i], lCheight[i]);
-    ctx.fillText("x: " + lCx[i] + " y: " + lCy[i], lCx[i], lCy[i] + 10);
+    ctx.strokeRect(lCx[i] - scroll, lCy[i], lCwidth[i], lCheight[i]);
+    ctx.font = canvasFont;
+    ctx.fillText("x: " + lCx[i] + " \ny: " + lCy[i] + "  \nid: " + lCid[i], lCx[i] - scroll, lCy[i] + 20);
 
-    drawReticle(lCx[i], lCy[i]);
+    drawReticle(lCx[i] - scroll, lCy[i]);
   }
 }
 
@@ -202,11 +226,11 @@ function animationTick() {
     if (curAnimFrame < 3) {
       curHeight = curAnimFrame;
 
-      drawTexture(blockHitX[i], blockHitY[i] - curHeight * 2, blockHitId[i]);
+      drawTexture(playerX - texturePixSize / 2, blockHitY[i] - curHeight * 2, blockHitId[i]);
     } else if (curAnimFrame > 2 && curAnimFrame < 6) {
       curHeight = 7 - curAnimFrame;
 
-      drawTexture(blockHitX[i], blockHitY[i] - curHeight * 2, blockHitId[i]);
+      drawTexture(playerX - texturePixSize / 2, blockHitY[i] - curHeight * 2, blockHitId[i]);
     } else {
       deleteAnimation(i);
     }
