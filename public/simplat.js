@@ -76,6 +76,8 @@ var playerX = 30.0,
   playerY = 10000.0,
   playerWidth = 50,
   playerHeight = 80,
+  playerDefHeight = 10,
+  playerDefWidth = 10,
   playerJumpHeight = 25,
   playerCrouching = false,
   playerRightPressed = false;
@@ -255,18 +257,27 @@ console.log("added key listener");
 // start setup
 
 function setup() {
+
+  c.width = window.innerWidth - 7;
+  c.height = window.innerHeight - 5;
   console.log(levels);
   console.log(textures);
 
-  pixSize = 10;
-  pspeed = 30;
+  pixSize = c.height / levels["level1"].split("%").length / textures.textureSize;
+  
+  playerJumpHeight = pixSize*3.2;
+  defaultpspeed = pixSize*1.31;
+  pspeed = defaultpspeed*2;
   console.log(pixSize);
   texturePixSize = pixSize * textures.textureSize;
   textureAtts = textures.attributes;
 
-  console.log(textures);
+  playerDefHeight = 7 * pixSize;
+  playerDefWidth = 5 * pixSize;
 
   loadLevel("level1");
+  
+  console.log(textures);
 
   for (var i = 0; i < textures.textureSize * textures.textureSize; i++) {
     blankTexture += "0.";
@@ -274,6 +285,8 @@ function setup() {
   blankTexture = blankTexture.substring(0, blankTexture.length - 1);
 
   levelBlockLength = curLevel[0].split(".") * texturePixSize;
+
+  
 
   drawStart();
   frame = 1000;
@@ -287,6 +300,8 @@ function loadLevel(levelName) {
     levelMetaExists = true;
     console.log("level metadata: ");
     console.log(curLevelMeta);
+
+    makeStars();
   }
 
   // if(levels.attributes === undefined) {
@@ -294,7 +309,6 @@ function loadLevel(levelName) {
   // }
 
   createCollision();
-  makeStars();
 
   playerX = 200.0;
   playerY = 0;
@@ -311,15 +325,13 @@ function createCollision() {
     for (var j = 0; j < levelStrip.length; j++) {
       //isSolid(levelStrip[j])
       if (isSolid(levelStrip[j])) {
-        var blockDelta = (textures.textureSize * pixSize);
+        var blockDelta = texturePixSize;
 
         lCx[colCount] = j * blockDelta;
         lCy[colCount] = i * blockDelta;
         lCwidth[colCount] = blockDelta;
         lCheight[colCount] = blockDelta;
         lCid[colCount] = levelStrip[j];
-
-
 
         colCount++;
       }
@@ -330,41 +342,11 @@ function createCollision() {
   lCtotal = colCount;
 }
 
-function isSolid(texID) {
-
-  var collideList = textureAtts.canCollide;
-  var rawHurtList = textureAtts.canHurt;
-  var rawGoal = textureAtts.isGoal;
-  //console.log(collideList);
-  var solidList = collideList.split(",");
-  var hurtList = rawHurtList.split(",");
-  var goalList = rawGoal.split(",");
-
-  for (var i = 0; i < solidList.length; i++) {
-    if (solidList[i] == texID) {
-      return true;
-    }
-  }
-
-  for (var i = 0; i < hurtList.length; i++) {
-    if (hurtList[i] == texID) {
-      return true;
-    }
-  }
-
-  for (var i = 0; i < goalList.length; i++) {
-    if (goalList[i] == texID) {
-      return true;
-    }
-  }
-
-  return false;
-
-}
-
 function draw() {
   c.width = window.innerWidth - 7;
   c.height = window.innerHeight - 5;
+
+  playerWidth = playerDefWidth;
 
   scrollBlock = ((scroll * -1) / texturePixSize) * -1;
 
@@ -375,15 +357,13 @@ function draw() {
       flickerTimer = true;
     }
   }
-    
-  
 
   handleKeys();
 
   calculateCollision();
 
   drawLevel();
-  drawPlayer(playerX, playerY - 80, 0);
+  drawPlayer(playerX, playerY - playerHeight, 0);
 
   if(alreadyWon) {
     
@@ -413,7 +393,7 @@ function draw() {
       playerHeight
     );
     ctx.fillText(
-      "X: " + Math.round(playerX) + " Y: " + playerY + " pFaster: " + pfaster + " pxV: " + pxV + " pyV: " + pyV,
+      "X: " + Math.round(playerX) + " Y: " + Math.round(playerY) + " height: " + playerHeight + " pxV: " + pxV + " pyV: " + pyV,
       playerX - 30,
       playerY - 90
     );
@@ -459,6 +439,12 @@ function draw() {
   if (playerX > scrollLine) {
     scroll += pxV;
     playerX = scrollLine;
+
+    var speedtaper = 2;
+    // for(var i = 0; i < 10; i++) {
+    //   scroll+=speedtaper;
+    //   speedtaper = speedtaper / 2;
+    // }
   }
 
   if(playerX < 65) {
@@ -475,6 +461,38 @@ function draw() {
   }
   frame++;
   animationTick();
+}
+
+function isSolid(texID) {
+
+  var collideList = textureAtts.canCollide;
+  var rawHurtList = textureAtts.canHurt;
+  var rawGoal = textureAtts.isGoal;
+  //console.log(collideList);
+  var solidList = collideList.split(",");
+  var hurtList = rawHurtList.split(",");
+  var goalList = rawGoal.split(",");
+
+  for (var i = 0; i < solidList.length; i++) {
+    if (solidList[i] == texID) {
+      return true;
+    }
+  }
+
+  for (var i = 0; i < hurtList.length; i++) {
+    if (hurtList[i] == texID) {
+      return true;
+    }
+  }
+
+  for (var i = 0; i < goalList.length; i++) {
+    if (goalList[i] == texID) {
+      return true;
+    }
+  }
+
+  return false;
+
 }
 
 function deleteAnimation(id) {
@@ -536,11 +554,11 @@ function youDied() {
 }
 
 function calculateCollision() {
-  playerY = playerY + pyV;
+  
 
   //wall collision detection
   //use canMoveRight and canMoveLeft to restrict movement
-  var distanceToWall = pxV;
+  var distanceToWall = Math.abs(pxV) + 1;
   var despawnRadius = 200;
 
   for (var i = 0; i < lCy.length; i++) {
@@ -551,7 +569,7 @@ function calculateCollision() {
         playerX + scroll - despawnRadius < lCx[i] &&
         lCx[i] + lCwidth[i] > playerX + distanceToWall + scroll &&
         lCx[i] < playerX + playerWidth / 2 + distanceToWall + scroll &&
-        playerY - 1 > lCy[i] &&
+        playerY-1 > lCy[i] &&
         playerY + playerHeight > lCy[i] + lCheight[i] &&
         playerY - playerHeight < lCy[i] + lCheight[i] && pyV < 2
       ) {
@@ -585,6 +603,7 @@ function calculateCollision() {
     } else {
       canMoveRight = true;
       canMoveLeft = true;
+      jumping = true;
     }
   }
 
@@ -714,8 +733,11 @@ function calculateCollision() {
     return false;
   }
 
+  playerY = playerY + pyV;
+
   playerX = playerX + pxV;
   pxV = pxV * pfriction;
+  
 
   if (checkFloorCollision()) {
     playerY = playerY - pyV;

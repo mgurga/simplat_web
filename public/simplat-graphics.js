@@ -53,10 +53,10 @@ function handleKeys() {
     if (keys[40]) {
       //down arrow
       //pointy -= pointpspeed;
-      playerHeight = 40;
+      playerHeight = playerDefHeight / 2;
       playerCrouching = true;
     } else {
-      playerHeight = 80;
+      playerHeight = playerDefHeight;
       playerCrouching = false;
     }
 
@@ -175,7 +175,7 @@ function drawStars() {
 
   for (var i = 0; i < starx.length; i++) {
     ctx.fillRect(starx[i] - scroll, stary[i], 10, 10);
-  }
+  }playerDefWidth = 6*pixSize;
 }
 
 function drawBackground() {
