@@ -26,7 +26,7 @@ function drawTexture(x, y, textureID) {
       for (var j = 0; j < textures.textureSize; j++) {
         if (
           textures.colorIndex[texData[j + textures.textureSize * i]] == "alpha"
-        ) {} else {
+        ) { } else {
           ctx.fillStyle =
             textures.colorIndex[texData[j + textures.textureSize * i]];
           ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize + 1, pixSize);
@@ -49,43 +49,44 @@ function handleKeys() {
   }
 
   var pointpspeed = 1;
+  if (canMove) {
+    if (keys[40]) {
+      //down arrow
+      //pointy -= pointpspeed;
+      playerHeight = 40;
+      playerCrouching = true;
+    } else {
+      playerHeight = 80;
+      playerCrouching = false;
+    }
 
-  if (keys[40]) {
-    //down arrow
-    //pointy -= pointpspeed;
-    playerHeight = 40;
-    playerCrouching = true;
-  } else {
-    playerHeight = 80;
-    playerCrouching = false;
-  }
+    if (keys[39] && canMoveRight || keys[68] && canMoveRight) {
+      //right arrow
+      pxV = defaultpspeed;
+      //pointx += pointpspeed;
+      playerRightPressed = true;
+    } else {
+      playerRightPressed = false;
+    }
 
-  if (keys[39] && canMoveRight || keys[68] && canMoveRight) {
-    //right arrow
-    pxV = defaultpspeed;
-    //pointx += pointpspeed;
-    playerRightPressed = true;
-  } else {
-    playerRightPressed = false;
-  }
+    if (keys[38] || keys[87]) {
+      //up arrow
+      if (!jumping) {
+        pyV = -1 * playerJumpHeight;
+        //pointy += pointpspeed;
+        jumping = true;
+      }
+    }
 
-  if (keys[38] || keys[87]) {
-    //up arrow
-    if (!jumping) {
-      pyV = -1 * playerJumpHeight;
-      //pointy += pointpspeed;
-      jumping = true;
+    if (keys[37] && canMoveLeft || keys[65] && canMoveLeft) {
+      //left arrow
+      pxV = -1 * defaultpspeed;
+      //pointx -= pointpspeed;
     }
   }
 
-  if (keys[37] && canMoveLeft || keys[65] && canMoveLeft) {
-    //left arrow
-    pxV = -1 * defaultpspeed;
-    //pointx -= pointpspeed;
-  }
-
-  if(keys[220]) {
-    if(debug) {
+  if (keys[220]) {
+    if (debug) {
       debug = false;
     } else {
       debug = true;
@@ -200,7 +201,7 @@ function drawCollision() {
     ctx.strokeRect(lCx[i] - scroll, lCy[i], lCwidth[i], lCheight[i]);
     ctx.font = canvasFont;
     ctx.fillText("x: " + lCx[i] + " \ny: " + lCy[i] + "  \nid: " + lCid[i], lCx[i] - scroll, lCy[i] + 20);
-
+    
     drawReticle(lCx[i] - scroll, lCy[i]);
   }
 }

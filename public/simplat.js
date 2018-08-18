@@ -5,10 +5,16 @@ var basePath = "";
 var baseModule = "simplat";
 var moduleName = "";
 var blankTexture = "";
+var modOverwrite = "";
 var staryNightHex = "#00033a";
 var canvasFont = "30px monospace";
 
-var drawpspeed = 10;
+////////// IMPORTANT RAW JSON FOR LEVELS ////////////////
+
+var smb11 = "https://api.jsonbin.io/b/5b74f3d62b23fb1f2b7467fe";
+var rbdebug = "https://api.jsonbin.io/b/5b74f465e013915146d53073";
+
+var drawpspeed = 0;
 var loadedFiles = 0;
 var totalFiles = 2;
 var imagesLoaded = 0;
@@ -28,6 +34,10 @@ var levelsLoaded = false;
 var levelMetaExists = false;
 var canGroundPound = false;
 var debug = false;
+var canMove = true;
+var alreadyWon = false;
+var loadLocal = false;
+var flickerTimer = true;
 
 var keys = [];
 var tiles = [];
@@ -45,7 +55,7 @@ var allLevelDataJSON = {};
 //game
 var frame = 0;
 var fps = 45;
-var pixSize = 7;
+var pixSize = 2;
 
 //level attributes
 var textureAtts = {};
@@ -56,6 +66,7 @@ var lCx = [],
   lCwidth = [],
   lCheight = [],
   lCid = [],
+  lCsp = [],
   levelLength = 1000,
   lCtotal = 0;
 
@@ -95,70 +106,140 @@ var pointx = 100,
 console.log("hello world, variables set");
 
 function preload() {
-  preLoadStart();
 
-  function preLoadStart() {
-    if (firstRun === false) {
-      var drawTimeout = setTimeout(preLoadLoop, 200);
-    }
+  if (loadLocal) {
+    preLoadStart();
 
-    function preLoadLoop() {
-      //first load prefs
-      console.log("getting levels");
-
-      loadJSON(
-        "data/" + baseModule + "/levels.json",
-        function (data) {
-          if (!prefLoaded) {
-            levels = data;
-            prefLoaded = true;
-            loadedFiles++;
-            //console.log(loadedFiles);
-          }
-        },
-        function (xhr) {
-          failedGets++;
-        }
-      );
-
-      console.log("getting textures");
-      //load levels json from the module name specified in the prefs file
-
-      loadJSON(
-        "data/" + baseModule + "/textures.json",
-        function (data) {
-          if (!levelsLoaded) {
-            textures = data;
-            levelsLoaded = true;
-            //console.log(loadedFiles);
-          }
-        },
-        function (xhr) {
-          failedGets++;
-        }
-      );
-
-      if (failedGets > 10) {
-        firstRun = true;
-
-        if (!levelsLoaded && !prefLoaded) {
-          alert("Failed loading level and texture data");
-        } else if (!levelsLoaded) {
-          alert("Failed loading level data");
-        } else if (!prefLoaded) {
-          alert("Failed loading pref data");
-        }
+    function preLoadStart() {
+      if (firstRun === false) {
+        var drawTimeout = setTimeout(preLoadLoop, 200);
       }
 
-      if (levelsLoaded && prefLoaded) {
-        firstRun = true;
-        setup();
-        drawStart();
-      } else if (loadedFiles < totalFiles) {
-        preLoadStart();
+      function preLoadLoop() {
+        //first load prefs
+        console.log("getting levels");
+
+        loadJSON(
+          "data/" + baseModule + "/levels.json",
+          function (data) {
+            if (!prefLoaded) {
+              levels = data;
+              prefLoaded = true;
+              loadedFiles++;
+              //console.log(loadedFiles);
+            }
+          },
+          function (xhr) {
+            failedGets++;
+          }
+        );
+
+        console.log("getting textures");
+        //load levels json from the module name specified in the prefs file
+
+        loadJSON(
+          "data/" + baseModule + "/textures.json",
+          function (data) {
+            if (!levelsLoaded) {
+              textures = data;
+              levelsLoaded = true;
+              //console.log(loadedFiles);
+            }
+          },
+          function (xhr) {
+            failedGets++;
+          }
+        );
+
+        if (failedGets > 10) {
+          firstRun = true;
+
+          if (!levelsLoaded && !prefLoaded) {
+            alert("Failed loading level and texture data");
+          } else if (!levelsLoaded) {
+            alert("Failed loading level data");
+          } else if (!prefLoaded) {
+            alert("Failed loading pref data");
+          }
+        }
+
+        if (levelsLoaded && prefLoaded) {
+          finishedLoading();
+        } else if (loadedFiles < totalFiles) {
+          preLoadStart();
+        }
       }
     }
+  } else {
+
+    var urlURL = window.location.href.split('#')[1];
+
+    var loadURL = smb11;
+
+    if(urlURL != undefined) {
+      loadURL = urlURL
+    }
+
+    if(modOverwrite != "") {
+      loadURL = modOverwrite;
+    }
+
+    var totalModuleLoad = {};
+    totalModuleLoad = getUrlJSON(loadURL, function(levelCall, textureCall) {
+
+      console.log("callback level: ");
+      console.log(levelCall);
+
+      console.log("callback texture: ");
+      console.log(textureCall);
+
+      levels = levelCall;
+      textures = textureCall;
+
+      finishedLoading();
+
+    });
+
   }
+}
+
+function finishedLoading() {
+  firstRun = true;
+
+  console.log(levels);
+
+  setup();
+}
+
+function reloadWURL(newURL) {
+  modOverwrite = newURL;
+  preload();
+}
+
+function getUrlJSON(yourUrl, success) {
+  var request = new XMLHttpRequest();
+  request.open('GET', yourUrl, true);
+
+  request.onload = function () {
+    if (request.status >= 200 && request.status < 400) {
+      // Success!
+      var data = JSON.parse(request.responseText);
+      console.log("gotem");
+      console.log(data);
+
+      success(data['levels'], data['textures']);
+    } else {
+      // We reached our target server, but it returned an error
+      console.log("target reached but failed loading");
+    }
+  };
+
+  request.onerror = function () {
+    console.log("error loading");
+  };
+
+  request.send();
+  
 }
 
 document.addEventListener("keydown", function (event) {
@@ -177,12 +258,13 @@ function setup() {
   console.log(levels);
   console.log(textures);
 
-
   pixSize = 10;
   pspeed = 30;
   console.log(pixSize);
   texturePixSize = pixSize * textures.textureSize;
   textureAtts = textures.attributes;
+
+  console.log(textures);
 
   loadLevel("level1");
 
@@ -193,6 +275,8 @@ function setup() {
 
   levelBlockLength = curLevel[0].split(".") * texturePixSize;
 
+  drawStart();
+  frame = 1000;
 }
 
 function loadLevel(levelName) {
@@ -204,6 +288,10 @@ function loadLevel(levelName) {
     console.log("level metadata: ");
     console.log(curLevelMeta);
   }
+
+  // if(levels.attributes === undefined) {
+  //   console.warn("NO LEVEL ATTRIBUTES   ALL BLOCKS WILL BE SOLID   CREATE SOME ATTRIBUTE WITH THE ATTRIBUTE EDITOR");
+  // }
 
   createCollision();
   makeStars();
@@ -231,6 +319,8 @@ function createCollision() {
         lCheight[colCount] = blockDelta;
         lCid[colCount] = levelStrip[j];
 
+
+
         colCount++;
       }
     }
@@ -244,9 +334,11 @@ function isSolid(texID) {
 
   var collideList = textureAtts.canCollide;
   var rawHurtList = textureAtts.canHurt;
+  var rawGoal = textureAtts.isGoal;
   //console.log(collideList);
   var solidList = collideList.split(",");
   var hurtList = rawHurtList.split(",");
+  var goalList = rawGoal.split(",");
 
   for (var i = 0; i < solidList.length; i++) {
     if (solidList[i] == texID) {
@@ -256,6 +348,12 @@ function isSolid(texID) {
 
   for (var i = 0; i < hurtList.length; i++) {
     if (hurtList[i] == texID) {
+      return true;
+    }
+  }
+
+  for (var i = 0; i < goalList.length; i++) {
+    if (goalList[i] == texID) {
       return true;
     }
   }
@@ -270,12 +368,37 @@ function draw() {
 
   scrollBlock = ((scroll * -1) / texturePixSize) * -1;
 
+  if(frame % 15 == 0) {
+    if(flickerTimer) {
+      flickerTimer = false;
+    } else {
+      flickerTimer = true;
+    }
+  }
+    
+  
+
   handleKeys();
 
   calculateCollision();
 
   drawLevel();
   drawPlayer(playerX, playerY - 80, 0);
+
+  if(alreadyWon) {
+    
+
+    if(flickerTimer) {
+      ctx.fillStyle = "#FFFFFF";
+    } else {
+      ctx.fillStyle = "#000000";
+    }
+
+    ctx.font = canvasFont;
+
+    ctx.fillText("you win",c.width/2-50, c.height/2);
+    ctx.fillText("refresh page to play again",c.width/2-50, c.height/2 + 30);
+  }
 
   if (debug) {
     drawReticle(playerX, playerY);
@@ -291,7 +414,7 @@ function draw() {
     );
     ctx.fillText(
       "X: " + Math.round(playerX) + " Y: " + playerY + " pFaster: " + pfaster + " pxV: " + pxV + " pyV: " + pyV,
-      playerX-30,
+      playerX - 30,
       playerY - 90
     );
 
@@ -306,20 +429,20 @@ function draw() {
 
   var scrollLine = (c.width / 10) * 6;
 
-  if(pxV >= 6 && !pfaster) {
+  if (pxV >= 6 && !pfaster) {
     pfaster = true;
     fastFrameStart = frame;
   }
 
-  if(pxV < 6 || !playerRightPressed) {
+  if (pxV < 6 || !playerRightPressed) {
     pfaster = false;
   }
 
-  if(pfaster && fastFrameStart + 60 < frame) {
+  if (pfaster && fastFrameStart + 60 < frame) {
     var speedDiff = frame / fastFrameStart;
 
-    if(speedDiff > 200) {
-      speedDiff = 200;
+    if (speedDiff > 1.1) {
+      speedDiff = 1.1;
     }
 
     pxV += pspeed + speedDiff;
@@ -329,13 +452,17 @@ function draw() {
     console.log("frameStart: " + fastFrameStart);
   }
 
-  if(pfaster && fastFrameStart + 60 > frame) {
-    pxV+=pspeed;
+  if (pfaster && fastFrameStart + 60 > frame) {
+    pxV += pspeed;
   }
 
   if (playerX > scrollLine) {
     scroll += pxV;
     playerX = scrollLine;
+  }
+
+  if(playerX < 65) {
+    playerX = 65;
   }
 
   if (playerY > curLevel.length * textures.textureSize * pixSize) {
@@ -364,6 +491,10 @@ function deleteAnimation(id) {
 
 function touchedCollision(colID) {
 
+  if (debug) {
+    console.log("touched id: " + colID);
+  }
+
   var rawHurtAtt = textureAtts.canHurt;
   var hurtAtt = rawHurtAtt.split(',');
 
@@ -382,7 +513,7 @@ function touchedCollision(colID) {
   for (var i = 0; i < goalAtt.length + 1; i++) {
     //console.log(hurtAtt + " " + lCid[colID]);
     if (goalAtt[i] == lCid[colID]) {
-      console.log("you win");
+
       youWin();
     }
 
@@ -391,7 +522,10 @@ function touchedCollision(colID) {
 }
 
 function youWin() {
-  fps = 0;
+  console.log("you win");
+  canMove = false;
+  alreadyWon = true;
+
 }
 
 function youDied() {
@@ -406,7 +540,7 @@ function calculateCollision() {
 
   //wall collision detection
   //use canMoveRight and canMoveLeft to restrict movement
-  var distanceToWall = 10;
+  var distanceToWall = pxV;
   var despawnRadius = 200;
 
   for (var i = 0; i < lCy.length; i++) {
@@ -423,9 +557,9 @@ function calculateCollision() {
       ) {
         //playerX = playerX + -1*pxV; + scroll
         touchedCollision(i);
-        
+
         pxV = 0;
-        
+
         jumping = true;
         canMoveRight = false;
       }
@@ -442,9 +576,9 @@ function calculateCollision() {
       ) {
         //playerX = playerX + -1*pxV;
         touchedCollision(i);
-        
+
         pxV = 0;
-        
+
         jumping = true;
         canMoveLeft = false;
       }
@@ -489,12 +623,12 @@ function calculateCollision() {
     var breakAtt = rawBreakAtt.split(',');
 
     for (var i = 0; i < breakAtt.length + 1; i++) {
-    //console.log(hurtAtt + " " + lCid[colID]);
-    if (breakAtt[i] == lCid[colID]) {
-      return true;
-    }
+      //console.log(hurtAtt + " " + lCid[colID]);
+      if (breakAtt[i] == lCid[colID]) {
+        return true;
+      }
 
-  }
+    }
 
     return false;
   }
@@ -542,7 +676,7 @@ function calculateCollision() {
       }
       _recompiled = _recompiled.substring(0, _lengthBackup.length);
       curLevel[_blocky] = _recompiled;
-    } else {}
+    } else { }
   }
 
   function createHitAnimation(_x, _y, _id, _startFrame) {
