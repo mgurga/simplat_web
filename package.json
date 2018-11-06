@@ -1,0 +1,27 @@
+{
+  "name": "simplat_web",
+  "version": "1.0.0",
+  "description": "javascript platformer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "package-mac": "electron-packager . --overwrite --platform=darwin --arch=x64 --icon=icons/person1024x1024.png --   prune=true --out=builds",
+    "package-win": "electron-packager . simplat --overwrite --asar=true --platform=win32 --arch=ia32 --icon=icons/person1024x1024.png --prune=true --out=builds --version-string.CompanyName=CE --version-string.FileDescription=CE --version-string.ProductName=\"simplat\"",    
+    "package-linux": "electron-packager . simplat --overwrite --asar=true --platform=linux --arch=x64 --icon=icons/person1024x1024.png --prune=true --out=builds"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rokie95/simplat_web.git"
+  },
+  "author": "rokie95",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rokie95/simplat_web/issues"
+  },
+  "homepage": "https://github.com/rokie95/simplat_web#readme",
+  "devDependencies": {
+    "electron": "^3.0.8"
+  },
+  "dependencies": {}
+}
