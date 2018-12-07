@@ -1,8 +1,17 @@
 var c = document.getElementById('simCanvas');
-c.height = 900;
-c.width = 1600;
-
 var ctx = c.getContext('2d');
+
+var deviceWidth = window.innerWidth;
+var deviceHeight = window.innerHeight;
+var nativeWidth = 1600;
+var nativeHeight = 900;
+var scaleFillNative = Math.max(deviceWidth / nativeWidth, deviceHeight / nativeHeight);
+console.log(scaleFillNative);
+c.style.width = (deviceWidth - 5) + "px";
+c.style.height = (deviceHeight - 5) + "px";
+c.width = deviceWidth - 5;
+c.height = deviceHeight - 5;
+ctx.setTransform(scaleFillNative, 0, 0, deviceHeight / nativeHeight, 0, 0);
 
 var basePath = '';
 var baseModule = 'simplat';
@@ -248,18 +257,20 @@ function scaleCanvasToCustom(factor) {
 
 function setup() {
 
-    console.log(scaleCanvasToCustom(window.innerHeight / 900));
+    //console.log(scaleCanvasToCustom(window.innerHeight / 900));
 
     //console.log(levels);
     //console.log(textures);
 
-    try {
-        pixSize = c.height / levels['level1'].split('%').length / textures.textureSize;
-    } catch (err) {
-        pixSize = 2;
-        console.warn("UNABLE TO DETECT LEVEL HEIGHT");
-        console.warn("something has gone horribly wrong");
-    }
+    pixSize = 8.5;
+
+    // try {
+    //     pixSize = c.height / levels['level1'].split('%').length / textures.textureSize;
+    // } catch (err) {
+    //     pixSize = 2;
+    //     console.warn("UNABLE TO DETECT LEVEL HEIGHT");
+    //     console.warn("something has gone horribly wrong");
+    // }
 
     player.defHeight = 7 * pixSize;
     player.defWidth = 5 * pixSize;
@@ -284,6 +295,7 @@ function setup() {
 
     drawStart();
     frame = 1000;
+
 }
 
 function loadLevel(levelName) {
@@ -451,7 +463,7 @@ function draw() {
         ctx.font = canvasFont;
     }
 
-    var scrollLine = (c.width / 10) * 6;
+    var scrollLine = (c.width / scaleFillNative) * 6 / 10;
 
     if (pxV >= 6 && !pfaster) {
         pfaster = true;
