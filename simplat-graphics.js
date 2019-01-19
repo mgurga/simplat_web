@@ -13,6 +13,8 @@ function drawTexture(x, y, textureID) {
         var texData = texDataRaw.split(".");
 
         if (texDataRaw == blankTexture && textureID == 0) {
+            // commenting this out makes transparency
+
             if (levelMetaExists && curLevelMeta["staryNight"] == true) {
                 ctx.fillStyle = staryNightHex;
                 ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
@@ -36,7 +38,7 @@ function drawTexture(x, y, textureID) {
                     ) {} else {
                         ctx.fillStyle =
                             textures.colorIndex[texData[j + textures.textureSize * i]];
-                        ctx.fillRect(i * pixSize + x, j * pixSize + y, pixSize + 1, pixSize);
+                        ctx.fillRect(i * pixSize + x - 1, j * pixSize + y - 1, pixSize + 1, pixSize + 1);
                     }
 
                 }
@@ -237,7 +239,7 @@ function drawStars() {
 }
 
 function drawBackground() {
-    ctx.fillStyle = "#262626";
+    ctx.fillStyle = textures.background;
     ctx.fillRect(0, 0, c.width, c.height);
 
     //   for (var i = 0; i < c.width / pixSize; i++) {

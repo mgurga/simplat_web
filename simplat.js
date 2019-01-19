@@ -60,6 +60,7 @@ var stary = [];
 var starState = [];
 
 var curLevelMeta = {};
+var curLevelName = "";
 var prefs = {};
 var levels = {};
 var textures = {};
@@ -168,7 +169,6 @@ function preload() {
             console.log('level loaded');
             //console.log(levelCall);
 
-
             console.log('textures loaded: ');
             //console.log(textureCall);
 
@@ -181,41 +181,14 @@ function preload() {
 }
 
 function finishedLoading() {
+    //level and textures loaded
     firstRun = true;
-
-    //console.log(levels);
-
     setup();
 }
 
 function reloadWURL(newURL) {
     modOverwrite = newURL;
     preload();
-}
-
-function getUrlJSON(yourUrl, success) {
-    var request = new XMLHttpRequest();
-    request.open('GET', yourUrl, true);
-
-    request.onload = function() {
-        if (request.status >= 200 && request.status < 400) {
-            // Success!
-            var data = JSON.parse(request.responseText);
-            console.log('got textures and levels');
-            //console.log(data);
-
-            success(data['levels'], data['textures']);
-        } else {
-            // We reached our target server, but it returned an error
-            console.log('target reached but failed loading');
-        }
-    };
-
-    request.onerror = function() {
-        console.log('error loading');
-    };
-
-    request.send();
 }
 
 document.addEventListener('keydown', function(event) {
@@ -250,14 +223,11 @@ function scaleCanvasToCustom(factor) {
     c.width = window.innerWidth;
     c.height = c.height * factor - 5;
 
-
     return "height: " + c.height + " width: " + c.width + " factor: " + factor;
 
 }
 
 function setup() {
-
-    //console.log(scaleCanvasToCustom(window.innerHeight / 900));
 
     //console.log(levels);
     //console.log(textures);
@@ -319,6 +289,8 @@ function loadLevel(levelName) {
 
         player.x = 200.0;
         player.y = 0;
+
+        curLevelName = levelName;
     } catch (err) {
         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         console.error("level cannot be loaded or collision could not be created");
@@ -339,8 +311,10 @@ function makeCollision() {
 
         for (var j = 0; j < levelStrip.length; j++) {
             //isSolid(levelStrip[j])
+
+            var blockDelta = texturePixSize;
+
             if (isSolid(levelStrip[j])) {
-                var blockDelta = texturePixSize;
 
                 lCx[colCount] = j * blockDelta;
                 lCy[colCount] = i * blockDelta;
@@ -352,7 +326,7 @@ function makeCollision() {
             }
 
             if (canHurt(levelStrip[j])) {
-                enemies[enemiestotal] = new Enemy(j * blockDelta, i * blockDelta, blockDelta, blockDelta, levelStrip[j]);
+                enemies[enemiestotal] = new Enemy(j * blockDelta, i * blockDelta, blockDelta - 2, blockDelta - 2, levelStrip[j]);
                 enemiestotal++;
 
                 createBlock(j, i, 0, false);
@@ -395,8 +369,10 @@ function draw() {
 
     calculateCollision();
 
+    calculatePlayerVelocity();
+
     drawLevel();
-    drawPlayer(player.x, player.y - player.height, 0);
+    drawPlayer(player.x, player.y - player.height - pixSize, 0);
 
     for (var s = 0; s < enemiestotal; s++) {
         enemies[s].tick();
@@ -520,7 +496,9 @@ function draw() {
     }
 
     if (player.y > curLevel.length * textures.textureSize * pixSize) {
-        pyV = 0;
+        if (!debug) {
+            pyV = 0;
+        }
         player.y = 0;
 
         if (player.x < 0) {
@@ -633,6 +611,15 @@ function youWin() {
     console.log('you win');
     canMove = false;
     alreadyWon = true;
+
+    var levelList = Object.keys(levels);
+
+    if (levels[levelList.indexOf(curLevelName) + 1] == undefined) {
+        console.log("end of levelpack");
+    } else {
+        loadLevel(levelList[levelList.indexOf(curLevelName) + 1]);
+    }
+
 }
 
 function youDied() {
@@ -647,6 +634,49 @@ function youDied() {
             ctx.fillStyle = '#000000';
         }
         ctx.fillText("[DEBUG]   DIED   [DEBUG]", c.width / 2, c.height / 2);
+    }
+}
+
+function calculatePlayerVelocity() {
+
+    player.y = player.y + pyV;
+
+    player.x = player.x + pxV;
+    pxV = pxV * pfriction;
+
+    if (checkFloorCollision()) {
+        player.y = player.y - pyV;
+        pyV = 0;
+        jumping = false;
+    } else {
+        pyV += pgravity;
+        jumping = true;
+    }
+
+    function checkFloorCollision() {
+        for (var i = 0; i < lCy.length; i++) {
+            if (
+                lCy[i] < player.y &&
+                lCy[i] + lCheight[i] > player.y &&
+                lCx[i] < player.x + player.width / 2 + scroll &&
+                lCx[i] + lCwidth[i] > player.x - player.width / 2 + scroll
+            ) {
+                if (canGroundPound && pyV > 20 && player.crouching) {
+                    blockHitUnder(
+                        lCx[i],
+                        lCy[i],
+                        i,
+                        'this is unused right now',
+                        'collision',
+                        true
+                    );
+                }
+
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -726,7 +756,7 @@ function calculateCollision() {
                     );
                     deleteCollision(i);
                 }
-                player.y = player.y + pyV;
+                player.y = player.y + (pyV * 2);
                 pyV = 0;
             }
         }
@@ -815,50 +845,6 @@ function calculateCollision() {
         blockHitTotal++;
     }
 
-    //ground collision detection
-    function checkFloorCollision() {
-        for (var i = 0; i < lCy.length; i++) {
-            if (
-                lCy[i] < player.y &&
-                lCy[i] + lCheight[i] > player.y &&
-                lCx[i] < player.x + player.width / 2 + scroll &&
-                lCx[i] + lCwidth[i] > player.x - player.width / 2 + scroll
-            ) {
-                if (canGroundPound && pyV > 20 && player.crouching) {
-                    blockHitUnder(
-                        lCx[i],
-                        lCy[i],
-                        i,
-                        'this is unused right now',
-                        'collision',
-                        true
-                    );
-                }
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    player.y = player.y + pyV;
-
-    player.x = player.x + pxV;
-    pxV = pxV * pfriction;
-
-    if (checkFloorCollision()) {
-        player.y = player.y - pyV;
-        pyV = 0;
-        jumping = false;
-    } else {
-        pyV += pgravity;
-        jumping = true;
-    }
-}
-
-function randNum(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function makeStars() {
@@ -981,4 +967,33 @@ function drawStart() {
         requestAnimationFrame(drawStart);
 
     }, 1000 / fps);
+}
+
+function getUrlJSON(yourUrl, success) {
+    var request = new XMLHttpRequest();
+    request.open('GET', yourUrl, true);
+
+    request.onload = function() {
+        if (request.status >= 200 && request.status < 400) {
+            // Success!
+            var data = JSON.parse(request.responseText);
+            console.log('got textures and levels');
+            //console.log(data);
+
+            success(data['levels'], data['textures']);
+        } else {
+            // We reached our target server, but it returned an error
+            console.log('target reached but failed loading');
+        }
+    };
+
+    request.onerror = function() {
+        console.log('error loading');
+    };
+
+    request.send();
+}
+
+function randNum(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
