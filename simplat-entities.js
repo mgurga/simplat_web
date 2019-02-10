@@ -1,7 +1,6 @@
 class Enemy {
 
     // ENEMY XY IS IN THE UPPER LEFT CORNER
-
     // COLLISION XY IS IN THE UPPER LEFT
 
     constructor(x, y, w, h, tex) {
@@ -159,6 +158,85 @@ class Enemy {
             ctx.fillText("Y: " + Math.round(this.y), this.x - scroll + this.width, this.y + 20);
             ctx.fillText("X DISTANCE: " + Math.abs((player.x + scroll) - (this.x)), this.x - scroll + this.width, this.y + 40);
             ctx.fillText("YV: " + this.yV, this.x - scroll + this.width, this.y + 60);
+        }
+    }
+}
+
+function splitBlock(texid, x, y) {
+    console.log("split id: " + texid);
+    console.log("split x: " + x);
+    console.log("split y: " + y);
+
+    var particlesTextures = ["", "", "", ""];
+    var originalPix = textures.textureSize;
+    var texDataRaw = textures.textureData[texid].split(".");
+
+    //particleTexture[0] = upper left
+    for (var j = 0; j < originalPix / 2; j++) {
+        for (var i = 0; i < originalPix / 2; i++) {
+            particlesTextures[0] += texDataRaw[i + j * originalPix] + ".";
+        }
+    }
+    particlesTextures[0] = particlesTextures[0].substring(0, particlesTextures[0].length - 1);
+
+    //particleTexture[1] = lower left
+    for (var j = 0; j < originalPix / 2; j++) {
+        for (var i = originalPix / 2; i < originalPix; i++) {
+            particlesTextures[1] += texDataRaw[i + j * originalPix] + ".";
+        }
+    }
+    particlesTextures[1] = particlesTextures[1].substring(0, particlesTextures[1].length - 1);
+
+    //particleTexture[2] = upper right
+    for (var j = originalPix / 2; j < originalPix; j++) {
+        for (var i = 0; i < originalPix / 2; i++) {
+            particlesTextures[2] += texDataRaw[i + j * originalPix] + ".";
+        }
+    }
+    particlesTextures[2] = particlesTextures[2].substring(0, particlesTextures[2].length - 1);
+
+    //particleTexture[3] = lower right
+    for (var j = originalPix / 2; j < originalPix; j++) {
+        for (var i = originalPix / 2; i < originalPix; i++) {
+            particlesTextures[3] += texDataRaw[i + j * originalPix] + ".";
+        }
+    }
+    particlesTextures[3] = particlesTextures[3].substring(0, particlesTextures[3].length - 1);
+
+    var halfPix = pixSize * (originalPix / 2);
+    blockHitParticles[blockHitParticles.length] = new blockBreakParticles(x, y, particlesTextures[0], originalPix / 2, "left");
+    blockHitParticles[blockHitParticles.length] = new blockBreakParticles(x, y + halfPix, particlesTextures[1], originalPix / 2, "left");
+    blockHitParticles[blockHitParticles.length] = new blockBreakParticles(x + halfPix, y, particlesTextures[2], originalPix / 2, "right");
+    blockHitParticles[blockHitParticles.length] = new blockBreakParticles(x + halfPix, y + halfPix, particlesTextures[3], originalPix / 2, "right");
+
+}
+
+class blockBreakParticles {
+    constructor(x, y, texData, texSize, rightOrLeft) {
+        this.x = x;
+        this.y = y;
+        this.xV = 0;
+        this.yV = 0;
+        if (rightOrLeft == "right") {
+            this.xV = 10 + randNum(-10, 10);
+            this.yV = -12 + randNum(-5, 5);
+        } else {
+            this.xV = -10 + randNum(-10, 10);
+            this.yV = -12 + randNum(-5, 5);
+        }
+        this.texData = texData;
+        this.texSize = texSize;
+        this.rrl = rightOrLeft;
+    }
+    tick() {
+        if (this.y < curLevel.length * texturePixSize) {
+            drawTexture(this.x - scroll, this.y, undefined, this.texData, this.texSize);
+
+            this.y += this.yV;
+            this.yV += 1.5;
+
+            this.x += this.xV;
+            this.xV *= 0.9;
         }
     }
 }

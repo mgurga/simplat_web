@@ -80,6 +80,7 @@ var runGame = true;
 var imageBuffer = [];
 var curImg = 0;
 var lastRunGame = true;
+var customCommands = "";
 
 //level attributes
 var textureAtts = {};
@@ -128,13 +129,7 @@ var enemies = [],
 
 var pointx = 100,
     pointy = 100,
-    blockHitX = [],
-    blockHitY = [],
-    blockHitW = [],
-    blockHitH = [],
-    blockHitId = [],
-    blockHitFrame = [],
-    blockHitTotal = 0;
+    blockHitParticles = [];
 
 console.log('hello world, variables set');
 
@@ -374,9 +369,15 @@ function draw() {
     drawLevel();
     drawPlayer(player.x, player.y - player.height - pixSize, 0);
 
+    //drawTexture(0, 0, 876, "2.3.1.1.2.3.3.3.2.3.1.1.2.3.1.1", 4);
+
     for (var s = 0; s < enemiestotal; s++) {
         enemies[s].tick();
         enemies[s].render();
+    }
+
+    for(var a = 0; a < blockHitParticles.length; a++) {
+        blockHitParticles[a].tick();
     }
 
     if (alreadyWon) {
@@ -507,6 +508,8 @@ function draw() {
     }
     frame++;
     animationTick();
+
+
 }
 
 function createBlock(x, y, type, remakeCollision) {
@@ -756,7 +759,7 @@ function calculateCollision() {
                     );
                     deleteCollision(i);
                 }
-                player.y = player.y + (pyV * 2);
+                player.y = player.y - pyV;
                 pyV = 0;
             }
         }
@@ -838,13 +841,24 @@ function calculateCollision() {
     }
 
     function createHitAnimation(_x, _y, _id, _startFrame) {
-        blockHitX[blockHitTotal] = _x;
-        blockHitY[blockHitTotal] = _y;
-        blockHitId[blockHitTotal] = _id;
-        blockHitFrame[blockHitTotal] = _startFrame;
-        blockHitTotal++;
+        // blockHitX[blockHitTotal] = _x;
+        // blockHitY[blockHitTotal] = _y;
+        // blockHitId[blockHitTotal] = _id;
+        // blockHitFrame[blockHitTotal] = _startFrame;
+        // blockHitTotal++;
+
+        console.log(getIdFromBlockPos(_x, _y));
+        splitBlock(getIdFromBlockPos(_x, _y), _x, _y);
+
     }
 
+}
+
+function getIdFromBlockPos(x, y) {
+    x = x / texturePixSize;
+    y = y / texturePixSize;
+    var rawLevelStrip = curLevel[y].split(".");
+    return rawLevelStrip[x];
 }
 
 function makeStars() {

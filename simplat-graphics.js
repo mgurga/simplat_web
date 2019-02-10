@@ -1,7 +1,12 @@
 var renderDistance = 35;
 
-function drawTexture(x, y, textureID) {
+function drawTexture(x, y, textureID, customTextureData, customTextureSize) {
     var texDataRaw = textures.textureData[textureID];
+    var texSize = textures.textureSize;
+    if (customTextureData != undefined) {
+        texDataRaw = customTextureData;
+        texSize = customTextureSize;
+    }
 
     if (texDataRaw == undefined) {
         console.error("Texture: " + textureID + " does not exist");
@@ -23,21 +28,23 @@ function drawTexture(x, y, textureID) {
                 ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
             }
         } else {
-            if (levelMetaExists && curLevelMeta["staryNight"] == true) {
-                ctx.fillStyle = staryNightHex;
-                ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
-            } else {
-                ctx.fillStyle = textures.background;
-                ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
+            if (customTextureSize == undefined) {
+                if (levelMetaExists && curLevelMeta["staryNight"] == true) {
+                    ctx.fillStyle = staryNightHex;
+                    ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
+                } else {
+                    ctx.fillStyle = textures.background;
+                    ctx.fillRect(x, y, texturePixSize + 1, texturePixSize);
+                }
             }
 
-            for (var i = 0; i < textures.textureSize; i++) {
-                for (var j = 0; j < textures.textureSize; j++) {
+            for (var i = 0; i < texSize; i++) {
+                for (var j = 0; j < texSize; j++) {
                     if (
-                        textures.colorIndex[texData[j + textures.textureSize * i]] == "alpha"
+                        textures.colorIndex[texData[j + texSize * i]] == "alpha"
                     ) {} else {
                         ctx.fillStyle =
-                            textures.colorIndex[texData[j + textures.textureSize * i]];
+                            textures.colorIndex[texData[j + texSize * i]];
                         ctx.fillRect(i * pixSize + x - 1, j * pixSize + y - 1, pixSize + 1, pixSize + 1);
                     }
 
@@ -111,14 +118,16 @@ function handleKeys() {
 
     var pointpspeed = 1;
     if (canMove) {
-        if (keys[40]) {
-            //down arrow
-            //pointy -= pointpspeed;
-            player.height = player.defHeight / 2;
-            player.crouching = true;
-        } else {
-            player.height = player.defHeight;
-            player.crouching = false;
+        if (debug) {
+            if (keys[40]) {
+                //down arrow
+                //pointy -= pointpspeed;
+                player.height = player.defHeight / 2;
+                player.crouching = true;
+            } else {
+                player.height = player.defHeight;
+                player.crouching = false;
+            }
         }
 
         if (keys[39] && canMoveRight || keys[68] && canMoveRight) {
@@ -190,12 +199,21 @@ function drawPlayer(_px, _py, _pid) {
                     ctx.fillStyle =
                         playerColorIndex[playerTexData[j + playerTexSize * i]];
 
-                    ctx.fillRect(
-                        i * playerPixSize + _px,
-                        j * playerPixSize + _py,
-                        playerPixSize,
-                        playerPixSize
-                    );
+                    if (player.crouching) {
+                        ctx.fillRect(
+                            i * playerPixSize + _px,
+                            j * playerPixSize / 2 + _py + playerPixSize / 2,
+                            playerPixSize,
+                            playerPixSize / 2
+                        );
+                    } else {
+                        ctx.fillRect(
+                            i * playerPixSize + _px,
+                            j * playerPixSize + _py,
+                            playerPixSize,
+                            playerPixSize
+                        );
+                    }
                     //ctx.strokeRect(i * playerPixSize + _px, j * playerPixSize + _py, playerPixSize, playerPixSize);
                 }
             }
@@ -300,20 +318,20 @@ function drawReticle(_rx, _ry) {
 }
 
 function animationTick() {
-    for (var i = 0; i < blockHitTotal; i++) {
-        var curAnimFrame = frame - blockHitFrame[i];
-        var curHeight = 0;
-
-        if (curAnimFrame < 3) {
-            curHeight = curAnimFrame;
-
-            drawTexture(player.x - texturePixSize / 2, blockHitY[i] - curHeight * 2, blockHitId[i]);
-        } else if (curAnimFrame > 2 && curAnimFrame < 6) {
-            curHeight = 7 - curAnimFrame;
-
-            drawTexture(player.x - texturePixSize / 2, blockHitY[i] - curHeight * 2, blockHitId[i]);
-        } else {
-            deleteAnimation(i);
-        }
-    }
+    // for (var i = 0; i < blockHitTotal; i++) {
+    //     var curAnimFrame = frame - blockHitFrame[i];
+    //     var curHeight = 0;
+    //
+    //     if (curAnimFrame < 3) {
+    //         curHeight = curAnimFrame;
+    //
+    //         drawTexture(player.x - texturePixSize / 2, blockHitY[i] - curHeight * 2, blockHitId[i]);
+    //     } else if (curAnimFrame > 2 && curAnimFrame < 6) {
+    //         curHeight = 7 - curAnimFrame;
+    //
+    //         drawTexture(player.x - texturePixSize / 2, blockHitY[i] - curHeight * 2, blockHitId[i]);
+    //     } else {
+    //         deleteAnimation(i);
+    //     }
+    // }
 }
