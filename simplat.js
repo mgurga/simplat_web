@@ -105,7 +105,7 @@ var player = {
     "height": 80,
     "defHeight": 10,
     "defWidth": 10,
-    "jumpHeight": 25,
+    "jumpHeight": 100,
     "crouching": false,
     "rightPressed": false
 };
@@ -116,7 +116,7 @@ var pxV = 0.0,
     fastFrameStart = 0,
     pyV = 0.0,
     pfriction = 0.6,
-    pgravity = 1.2,
+    pgravity = 1.3,
     pspeed = 2,
     defaultpspeed = 10,
     pjumping = false,
@@ -226,7 +226,7 @@ function setup() {
 
     //console.log(levels);
     //console.log(textures);
-
+    keys[220] = false;
     pixSize = 8.5;
 
     // try {
@@ -343,6 +343,10 @@ function draw() {
     player.blockX = Math.round((player.x - scroll) / texturePixSize);
     player.blockY = Math.round((player.y) / texturePixSize);
 
+    if(pxV < 0.000001) {
+        pxV = 0;
+    }
+
     unknownColor++;
     if (unknownColor > 255) {
         unknownColor = 0;
@@ -362,9 +366,20 @@ function draw() {
 
     handleKeys();
 
-    calculateCollision();
+    for(var i = 0; i < 10; i++) {
+        calculateCollision();
+        calculatePlayerVelocity(10);
+    }
+    pxV = pxV * (pfriction);
 
-    calculatePlayerVelocity();
+    if (checkFloorCollision()) {
+        player.y = player.y - pyV;
+        pyV = 0;
+        jumping = false;
+    } else {
+        pyV += pgravity;
+        jumping = true;
+    }
 
     drawLevel();
     drawPlayer(player.x, player.y - player.height - pixSize, 0);
@@ -433,6 +448,7 @@ function draw() {
         ctx.fillText("player block y: " + player.blockY, 0, 120);
         ctx.fillText("scroll: " + scroll, 0, 140);
         ctx.fillText("pfaster: " + pfaster, 0, 160);
+        ctx.fillText("jumping: " + jumping, 0, 180);
 
         // ctx.fillText("X:" + pointx + " Y:" + pointy, pointx, pointy);
         // ctx.strokeRect(pointx, pointy, textures.textureSize * pixSize, 1);
@@ -640,57 +656,37 @@ function youDied() {
     }
 }
 
-function calculatePlayerVelocity() {
+function calculatePlayerVelocity(loops) {
 
-    player.y = player.y + pyV;
+    player.y = player.y + (pyV/loops);
 
-    player.x = player.x + pxV;
-    pxV = pxV * pfriction;
+    player.x = player.x + (pxV/loops);
+    
+}
 
-    if (checkFloorCollision()) {
-        player.y = player.y - pyV;
-        pyV = 0;
-        jumping = false;
-    } else {
-        pyV += pgravity;
-        jumping = true;
-    }
-
-    function checkFloorCollision() {
-        for (var i = 0; i < lCy.length; i++) {
-            if (
-                lCy[i] < player.y &&
-                lCy[i] + lCheight[i] > player.y &&
-                lCx[i] < player.x + player.width / 2 + scroll &&
-                lCx[i] + lCwidth[i] > player.x - player.width / 2 + scroll
-            ) {
-                if (canGroundPound && pyV > 20 && player.crouching) {
-                    blockHitUnder(
-                        lCx[i],
-                        lCy[i],
-                        i,
-                        'this is unused right now',
-                        'collision',
-                        true
-                    );
-                }
-
-                return true;
-            }
+function checkFloorCollision() {
+    for (var i = 0; i < lCy.length; i++) {
+        if (
+            lCy[i] <= player.y &&
+            lCy[i] + lCheight[i] > player.y &&
+            lCx[i] < player.x + player.width / 2 + scroll &&
+            lCx[i] + lCwidth[i] > player.x - player.width / 2 + scroll
+        ) {
+            return true;
         }
-
-        return false;
     }
+    return false;
 }
 
 function calculateCollision() {
     //wall collision detection
     //use canMoveRight and canMoveLeft to restrict movement
-    var distanceToWall = Math.abs(pxV) + 1;
+    var distanceToWall = 4;
     var despawnRadius = 200;
 
     for (var i = 0; i < lCy.length; i++) {
         if (pxV > 0) {
+            //moving right
             canMoveLeft = true;
             if (
                 player.x + scroll + 5 + despawnRadius > lCx[i] &&
@@ -710,6 +706,7 @@ function calculateCollision() {
                 canMoveRight = false;
             }
         } else if (pxV < 0) {
+            //moveing left
             canMoveRight = true;
             if (
                 player.x + scroll + despawnRadius > lCx[i] &&
@@ -855,8 +852,9 @@ function calculateCollision() {
 }
 
 function getIdFromBlockPos(x, y) {
-    x = x / texturePixSize;
-    y = y / texturePixSize;
+    //console.log(arguments);
+    x = Math.ceil(x / texturePixSize);
+    y = Math.ceil(y / texturePixSize);
     var rawLevelStrip = curLevel[y].split(".");
     return rawLevelStrip[x];
 }
