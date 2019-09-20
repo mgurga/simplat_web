@@ -23,7 +23,7 @@ var canvasFont = '30px monospace';
 
 ////////// IMPORTANT RAW JSON FOR LEVELS ////////////////
 
-var smb11 = 'https://api.jsonbin.io/b/5b74f3d62b23fb1f2b7467fe';
+var smb11 = 'smb11.json';
 var rbdebug = 'https://api.jsonbin.io/b/5b74f465e013915146d53073';
 
 var drawpspeed = 0;
@@ -136,9 +136,16 @@ console.log('hello world, variables set');
 function preload() {
     var toLoad = smb11;
 
+    if (smb11.substr(0, 3) == "http") {
+        loadLocal = true;
+    } else {
+        loadLocal = false;
+    }
+
     if (loadLocal) {
 
-        loadJSON(toLoad, function(data) {
+        loadJSON(toLoad, function (data) {
+            console.log(data);
             var dataJson = JSON.parse(data);
             levels = data.levels;
             textures = data.textures;
@@ -160,7 +167,7 @@ function preload() {
         }
 
         var totalModuleLoad = {};
-        totalModuleLoad = getUrlJSON(loadURL, function(levelCall, textureCall) {
+        totalModuleLoad = getUrlJSON(loadURL, function (levelCall, textureCall) {
             console.log('level loaded');
             //console.log(levelCall);
 
@@ -186,11 +193,11 @@ function reloadWURL(newURL) {
     preload();
 }
 
-document.addEventListener('keydown', function(event) {
+document.addEventListener('keydown', function (event) {
     keys[event.keyCode] = true;
     //console.log(event.key + "   code: " + event.keyCode);
 });
-document.addEventListener('keyup', function(event) {
+document.addEventListener('keyup', function (event) {
     keys[event.keyCode] = false;
 });
 
@@ -343,7 +350,7 @@ function draw() {
     player.blockX = Math.round((player.x - scroll) / texturePixSize);
     player.blockY = Math.round((player.y) / texturePixSize);
 
-    if(pxV < 0.000001) {
+    if (pxV < 0.000001) {
         pxV = 0;
     }
 
@@ -366,7 +373,7 @@ function draw() {
 
     handleKeys();
 
-    for(var i = 0; i < 10; i++) {
+    for (var i = 0; i < 10; i++) {
         calculateCollision();
         calculatePlayerVelocity(10);
     }
@@ -391,7 +398,7 @@ function draw() {
         enemies[s].render();
     }
 
-    for(var a = 0; a < blockHitParticles.length; a++) {
+    for (var a = 0; a < blockHitParticles.length; a++) {
         blockHitParticles[a].tick();
     }
 
@@ -658,10 +665,10 @@ function youDied() {
 
 function calculatePlayerVelocity(loops) {
 
-    player.y = player.y + (pyV/loops);
+    player.y = player.y + (pyV / loops);
 
-    player.x = player.x + (pxV/loops);
-    
+    player.x = player.x + (pxV / loops);
+
 }
 
 function checkFloorCollision() {
@@ -681,7 +688,7 @@ function checkFloorCollision() {
 function calculateCollision() {
     //wall collision detection
     //use canMoveRight and canMoveLeft to restrict movement
-    var distanceToWall = 4;
+    var distanceToWall = 7;
     var despawnRadius = 200;
 
     for (var i = 0; i < lCy.length; i++) {
@@ -834,7 +841,7 @@ function calculateCollision() {
             }
             _recompiled = _recompiled.substring(0, _lengthBackup.length);
             curLevel[_blocky] = _recompiled;
-        } else {}
+        } else { }
     }
 
     function createHitAnimation(_x, _y, _id, _startFrame) {
@@ -876,23 +883,17 @@ function makeStars() {
     }
 }
 
-function loadJSON(path, success, error) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === XMLHttpRequest.DONE) {
-            if (xhr.status === 200) {
-                if (success) success(JSON.parse(xhr.responseText));
-            } else {
-                if (error) error(xhr);
-            }
-        }
-    };
-    xhr.open('GET', path, true);
-    xhr.send();
+function loadJSON(filename, datacallback) {
+    var client = new XMLHttpRequest();
+    client.open('GET', '/' + filename);
+    client.onreadystatechange = function () {
+        datacallback(client.responseText);
+    }
+    client.send();
 }
 
 function drawStart() {
-    setTimeout(function() {
+    setTimeout(function () {
         if (runGame) {
             if (slideshowSaveType == "wholescreen") {
                 imageBuffer[imageBuffer.length] = ctx.getImageData(0, 0, c.width, c.height);
@@ -985,7 +986,7 @@ function getUrlJSON(yourUrl, success) {
     var request = new XMLHttpRequest();
     request.open('GET', yourUrl, true);
 
-    request.onload = function() {
+    request.onload = function () {
         if (request.status >= 200 && request.status < 400) {
             // Success!
             var data = JSON.parse(request.responseText);
@@ -999,7 +1000,7 @@ function getUrlJSON(yourUrl, success) {
         }
     };
 
-    request.onerror = function() {
+    request.onerror = function () {
         console.log('error loading');
     };
 

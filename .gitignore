@@ -2,3 +2,4 @@ node_modules
 bin
 lib
 builds
+workspace.code-workspace
