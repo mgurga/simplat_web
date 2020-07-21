@@ -23,8 +23,8 @@ var canvasFont = '30px monospace';
 
 ////////// IMPORTANT RAW JSON FOR LEVELS ////////////////
 
-var smb11 = 'smb11.json';
-var rbdebug = 'https://api.jsonbin.io/b/5b74f465e013915146d53073';
+var smb11 = 'https://raw.githubusercontent.com/rokie95/simplat_web/master/smb11.json';
+//var rbdebug = 'https://api.jsonbin.io/b/5b74f465e013915146d53073';
 
 var drawpspeed = 0;
 var loadedFiles = 0;
