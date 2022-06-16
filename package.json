@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/rokie95/simplat_web#readme",
   "devDependencies": {
-    "electron": "^3.0.8"
+    "electron": "^15.5.5"
   },
   "dependencies": {}
 }
